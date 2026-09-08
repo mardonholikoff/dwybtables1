@@ -368,12 +368,23 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
         return false;
       }
       // 3. Faoliyat turi (select filtri)
-      if (filterActivity !== 'all' && item.activityType !== filterActivity) {
-        return false;
+      if (filterActivity !== 'all') {
+        const itemActs = item.activityTypes && item.activityTypes.length > 0
+          ? item.activityTypes
+          : typeof item.activityType === 'string'
+            ? item.activityType.split(',').map((s) => s.trim()).filter(Boolean)
+            : [item.activityType];
+        if (!itemActs.includes(filterActivity as any)) return false;
       }
       // 3. Faoliyat turi (bir nechta tick orqali)
-      if (filterActivityList.length > 0 && !filterActivityList.includes(item.activityType)) {
-        return false;
+      if (filterActivityList.length > 0) {
+        const itemActs = item.activityTypes && item.activityTypes.length > 0
+          ? item.activityTypes
+          : typeof item.activityType === 'string'
+            ? item.activityType.split(',').map((s) => s.trim()).filter(Boolean)
+            : [item.activityType];
+        const hasMatch = filterActivityList.some((act) => itemActs.includes(act as any));
+        if (!hasMatch) return false;
       }
       // 7. Pul o'tkazmalari (select filtri)
       if (filterPaymentMethod !== 'all') {
@@ -2187,15 +2198,27 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                       </td>
 
                       {/* 3. Faoliyat turi (To'g'ridan-to'g'ri ko'rinadi) */}
-                      <td className="p-1.5 border-r border-amber-300 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black uppercase bg-yellow-200 text-black border border-amber-400 rounded-none">
-                          {item.activityType === 'jismoniy' ? (
-                            <UserCheck className="w-2.5 h-2.5 text-stone-800" />
-                          ) : (
-                            <Building2 className="w-2.5 h-2.5 text-stone-800" />
-                          )}
-                          <span>{item.activityType}</span>
-                        </span>
+                      <td className="p-1.5 border-r border-amber-300">
+                        <div className="flex flex-wrap gap-1">
+                          {(item.activityTypes && item.activityTypes.length > 0
+                            ? item.activityTypes
+                            : typeof item.activityType === 'string'
+                              ? item.activityType.split(',').map((s) => s.trim()).filter(Boolean)
+                              : [item.activityType || 'jismoniy']
+                          ).map((act) => (
+                            <span
+                              key={act}
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[9px] font-black uppercase bg-yellow-200 text-black border border-amber-400 rounded-none whitespace-nowrap"
+                            >
+                              {act === 'jismoniy' ? (
+                                <UserCheck className="w-2.5 h-2.5 text-stone-800" />
+                              ) : (
+                                <Building2 className="w-2.5 h-2.5 text-stone-800" />
+                              )}
+                              <span>{act}</span>
+                            </span>
+                          ))}
+                        </div>
                       </td>
 
                       {/* 4. Nom (Sticky pinned) */}
@@ -2573,11 +2596,21 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                       </h2>
                       
                       {/* Faoliyat turi (To'g'ridan-to'g'ri ko'rinadi) */}
-                      <div className="mt-1">
-                        <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-stone-800 bg-yellow-200 px-1.5 py-0.5 border border-amber-400">
-                          {item.activityType === 'jismoniy' ? <UserCheck className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
-                          {item.activityType}
-                        </span>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {(item.activityTypes && item.activityTypes.length > 0
+                          ? item.activityTypes
+                          : typeof item.activityType === 'string'
+                            ? item.activityType.split(',').map((s) => s.trim()).filter(Boolean)
+                            : [item.activityType || 'jismoniy']
+                        ).map((act) => (
+                          <span
+                            key={act}
+                            className="inline-flex items-center gap-1 text-[10px] font-black uppercase text-stone-800 bg-yellow-200 px-1.5 py-0.5 border border-amber-400"
+                          >
+                            {act === 'jismoniy' ? <UserCheck className="w-3 h-3" /> : <Building2 className="w-3 h-3" />}
+                            {act}
+                          </span>
+                        ))}
                       </div>
                     </div>
                   </div>

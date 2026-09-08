@@ -9,6 +9,8 @@ import {
   Search,
   RotateCcw,
   Check,
+  UserCheck,
+  Building2,
 } from 'lucide-react';
 import {
   Supplier,
@@ -82,6 +84,7 @@ export const getScoreFromDiscipline = (disc: DisciplineLevel): number => {
 
 const DEFAULT_FORM_STATE: SupplierFormData = {
   activityType: 'jismoniy', // 3: default jismoniy
+  activityTypes: ['jismoniy'],
   name: '', // 4: majburiy
   address: '', // 5: majburiy
   phone: '', // 6: majburiy
@@ -134,8 +137,15 @@ export const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
           ? initialSupplier.paymentConditions
           : [initialSupplier.paymentCondition || 'naqd joyida'];
 
+        const initActs: ActivityType[] = initialSupplier.activityTypes && initialSupplier.activityTypes.length > 0
+          ? (initialSupplier.activityTypes as ActivityType[])
+          : typeof initialSupplier.activityType === 'string'
+            ? (initialSupplier.activityType.split(',').map((s) => s.trim()).filter(Boolean) as ActivityType[])
+            : [initialSupplier.activityType || 'jismoniy'];
+
         setFormData({
-          activityType: initialSupplier.activityType,
+          activityType: initialSupplier.activityType || 'jismoniy',
+          activityTypes: initActs.length > 0 ? initActs : ['jismoniy'],
           name: initialSupplier.name,
           address: initialSupplier.address,
           phone: initialSupplier.phone,
@@ -217,6 +227,25 @@ export const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
   // Mahsulotni ro'yxatdan olib tashlash
   const handleRemoveProduct = (productName: string) => {
     setSelectedProducts((prev) => prev.filter((p) => p !== productName));
+  };
+
+  // Faoliyat turi ko'p tanlovi (Tick qilib jismoniy, yuridik yoki ikkalasini tanlash)
+  const handleToggleActivityType = (type: ActivityType) => {
+    setFormData((prev) => {
+      const current = (prev.activityTypes && prev.activityTypes.length > 0)
+        ? prev.activityTypes
+        : [prev.activityType as ActivityType];
+      const updated = current.includes(type)
+        ? current.filter((t) => t !== type)
+        : [...current, type];
+
+      const finalActs = updated.length === 0 ? [type] : updated;
+      return {
+        ...prev,
+        activityTypes: finalActs,
+        activityType: finalActs.join(', '),
+      };
+    });
   };
 
   // Pul o'tkazmalari ko'p tanlovi (Smooth Toggle - doimiy silliq va birinchi bosishdayoq ishlaydi)
@@ -365,8 +394,14 @@ export const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
       .map((p) => p.trim())
       .filter((p) => p.length > 0);
 
+    const acts = (formData.activityTypes && formData.activityTypes.length > 0)
+      ? formData.activityTypes
+      : [formData.activityType as ActivityType];
+
     const submissionData: SupplierFormData = {
       ...formData,
+      activityTypes: acts,
+      activityType: acts.join(', '),
       extrasScore: 0, // yetkazib berishda baho bo'lmaydi
       products: cleanProducts,
     };
@@ -687,20 +722,59 @@ export const AddSupplierModal: React.FC<AddSupplierModalProps> = ({
               Faoliyat va to'lov shartlari (bir nechta turlarini tanlash mumkin)
             </h3>
 
-            {/* 3-Faoliyat turi */}
-            <div className="space-y-1">
-              <label htmlFor="supplier-activity" className="block text-xs font-black text-black">
-                3. Faoliyat turi <span className="text-stone-700 text-[10px] font-semibold">(avto: jismoniy)</span>
-              </label>
-              <select
-                id="supplier-activity"
-                value={formData.activityType}
-                onChange={(e) => setFormData({ ...formData, activityType: e.target.value as ActivityType })}
-                className="w-full px-3.5 py-2 text-sm border-2 border-amber-400 bg-white text-black font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500 rounded-none"
-              >
-                <option value="jismoniy">jismoniy</option>
-                <option value="yuridik">yuridik</option>
-              </select>
+            {/* 3-Faoliyat turi (Tick orqali birdaniga ikkalasini ham tanlash imkoni) */}
+            <div className="space-y-1.5 p-2.5 bg-yellow-50/70 border-2 border-amber-300">
+              <div className="flex items-center justify-between">
+                <label className="block text-xs font-black text-black">
+                  3. Faoliyat turi <span className="text-stone-700 text-[10px] font-semibold">(birdaniga ikkalasini ham tanlash mumkin)</span>
+                </label>
+                <span className="text-[10px] font-bold text-amber-950 bg-amber-200 px-1.5 py-0.5 border border-amber-400">
+                  {((formData.activityTypes && formData.activityTypes.length > 0)
+                    ? formData.activityTypes
+                    : [formData.activityType]
+                  ).join(' + ')}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {(['jismoniy', 'yuridik'] as ActivityType[]).map((type) => {
+                  const currentActs = (formData.activityTypes && formData.activityTypes.length > 0)
+                    ? formData.activityTypes
+                    : [formData.activityType as ActivityType];
+                  const isChecked = currentActs.includes(type);
+
+                  return (
+                    <button
+                      type="button"
+                      key={type}
+                      onClick={() => handleToggleActivityType(type)}
+                      className={`flex items-center gap-2 p-2.5 border-2 cursor-pointer transition select-none text-left rounded-none active:scale-[0.98] ${
+                        isChecked
+                          ? 'bg-amber-300 border-amber-600 text-black font-black shadow-2xs'
+                          : 'bg-white hover:bg-yellow-50 border-amber-300 text-stone-700 font-semibold'
+                      }`}
+                      title={isChecked ? `${type} ni bekor qilish` : `${type} ni tanlash`}
+                    >
+                      <div
+                        className={`w-4 h-4 border-2 flex items-center justify-center shrink-0 rounded-none transition-colors ${
+                          isChecked
+                            ? 'bg-amber-600 border-amber-700 text-white'
+                            : 'bg-white border-stone-400'
+                        }`}
+                      >
+                        {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {type === 'jismoniy' ? (
+                          <UserCheck className="w-4 h-4 text-stone-800 shrink-0" />
+                        ) : (
+                          <Building2 className="w-4 h-4 text-stone-800 shrink-0" />
+                        )}
+                        <span className="text-xs uppercase font-bold tracking-wide truncate">{type}</span>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
             {/* 7-Pul o'tkazmalari (Bir nechta turlarini tanlash mumkin - SMOOTH TOGGLE) */}

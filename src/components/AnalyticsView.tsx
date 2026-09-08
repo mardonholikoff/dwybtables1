@@ -36,6 +36,7 @@ import {
 } from 'recharts';
 import { AutoPart, Supplier } from '../types';
 import * as XLSX from 'xlsx';
+import { formatUSD } from '../utils/formatCurrency';
 
 interface AnalyticsViewProps {
   parts: AutoPart[];
@@ -261,7 +262,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
   const currentAvgPrice = useMemo(() => {
     if (currentSupplierQuotes.length === 0) return 0;
     const sum = currentSupplierQuotes.reduce((acc, q) => acc + (Number(q.price) || 0), 0);
-    return Math.round(sum / currentSupplierQuotes.length);
+    return Number((sum / currentSupplierQuotes.length).toFixed(4));
   }, [currentSupplierQuotes]);
 
   // Tahliliy chizmalar uchun ma'lumotlarni tayyorlash:
@@ -317,7 +318,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
       }
     });
 
-    const avgPrice = Math.round(totalPrice / sortedRecords.length);
+    const avgPrice = Number((totalPrice / sortedRecords.length).toFixed(4));
     const firstPrice = sortedRecords[0]?.price || 0;
     const lastPrice = sortedRecords[sortedRecords.length - 1]?.price || 0;
     const priceDiff = lastPrice - firstPrice;
@@ -373,7 +374,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
     });
 
     return Array.from(map.entries()).map(([supplier, d]) => {
-      const avg = Math.round(d.allPrices.reduce((a, b) => a + b, 0) / d.allPrices.length);
+      const avg = Number((d.allPrices.reduce((a, b) => a + b, 0) / d.allPrices.length).toFixed(4));
       return {
         supplier,
         count: d.count,
@@ -437,7 +438,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
       'Avto ehtiyot qism': item.partName,
       'Brend': item.brand,
       'Yetkazib beruvchi': item.supplierName,
-      'Narxi (so\'m)': item.price,
+      'Narxi ($ / USD)': item.price,
       'Manba': item.source,
       'Izoh': item.comment,
     }));
@@ -482,7 +483,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                     <span className="font-bold text-stone-900 truncate">{supplier}</span>
                   </div>
                   <span className="font-mono font-black text-amber-900 whitespace-nowrap">
-                    {Number(price).toLocaleString('uz-UZ')} so'm
+                    {formatUSD(price)}
                   </span>
                 </div>
               );
@@ -752,11 +753,11 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
             <div className="flex items-center gap-2 shrink-0 bg-white border-2 border-emerald-600 px-3 py-1.5 shadow-2xs">
               <span className="text-[10px] uppercase font-bold text-stone-500">Eng past narx:</span>
               <span className="font-mono font-black text-sm sm:text-base text-emerald-900">
-                {cheapestCurrentPrice.toLocaleString('uz-UZ')} so'm
+                {formatUSD(cheapestCurrentPrice)}
               </span>
               {currentAvgPrice > cheapestCurrentPrice && (
                 <span className="text-[10px] font-black text-emerald-700 bg-emerald-100 px-1 py-0.5 border border-emerald-400">
-                  -{(currentAvgPrice - cheapestCurrentPrice).toLocaleString('uz-UZ')} so'm arzon
+                  -{formatUSD(currentAvgPrice - cheapestCurrentPrice)} arzon
                 </span>
               )}
             </div>
@@ -896,7 +897,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                   {/* Pastki qism: Afzallik xulosasi */}
                   <div className="pt-1.5 border-t border-emerald-200 flex items-center justify-between text-[10px]">
                     <span className="font-mono font-black text-emerald-900">
-                      {Number(quoteItem.price).toLocaleString('uz-UZ')} so'm
+                      {formatUSD(quoteItem.price)}
                     </span>
                     <span className="inline-flex items-center gap-1 font-black text-emerald-800">
                       <CheckCircle2 className="w-3 h-3 text-emerald-600" />
@@ -931,7 +932,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                   <ArrowDownRight className="w-4 h-4 stroke-[3]" />
                 </div>
                 <p className="text-base sm:text-lg font-mono font-black text-black">
-                  {stats.minPrice.toLocaleString('uz-UZ')} so'm
+                  {formatUSD(stats.minPrice)}
                 </p>
                 <div className="text-[10px] text-stone-700 font-bold truncate">
                   <span className="text-stone-500">Yetkazib beruvchi:</span>{' '}
@@ -949,7 +950,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                   <ArrowUpRight className="w-4 h-4 stroke-[3]" />
                 </div>
                 <p className="text-base sm:text-lg font-mono font-black text-black">
-                  {stats.maxPrice.toLocaleString('uz-UZ')} so'm
+                  {formatUSD(stats.maxPrice)}
                 </p>
                 <div className="text-[10px] text-stone-700 font-bold truncate">
                   <span className="text-stone-500">Yetkazib beruvchi:</span>{' '}
@@ -967,7 +968,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                   <DollarSign className="w-4 h-4 stroke-[2.5]" />
                 </div>
                 <p className="text-base sm:text-lg font-mono font-black text-black">
-                  {stats.avgPrice.toLocaleString('uz-UZ')} so'm
+                  {formatUSD(stats.avgPrice)}
                 </p>
                 <div className="text-[10px] text-stone-700 font-bold">
                   <span>Jami:</span>{' '}
@@ -997,19 +998,18 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                   )}
                 </div>
                 <p className="text-base sm:text-lg font-mono font-black text-black">
-                  {stats.lastPrice.toLocaleString('uz-UZ')} so'm
+                  {formatUSD(stats.lastPrice)}
                 </p>
                 <div className="text-[10px] text-stone-700 font-bold truncate">
                   Farq:{' '}
                   <span className="text-black font-black">
                     {stats.priceDiff > 0
-                      ? `+${stats.priceDiff.toLocaleString('uz-UZ')}`
-                      : stats.priceDiff.toLocaleString('uz-UZ')}{' '}
-                    so'm
+                      ? `+${formatUSD(stats.priceDiff)}`
+                      : formatUSD(stats.priceDiff)}
                   </span>
                 </div>
                 <div className="text-[9px] text-stone-500 font-mono truncate">
-                  Boshlang'ich: {stats.firstPrice.toLocaleString('uz-UZ')} so'm
+                  Boshlang'ich: {formatUSD(stats.firstPrice)}
                 </div>
               </div>
             </div>
@@ -1152,12 +1152,15 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                     dy={5}
                   />
 
-                  {/* Y o'qi: Narxi (so'mda) */}
+                  {/* Y o'qi: Narxi ($ / USD) */}
                   <YAxis
-                    width={48}
+                    width={56}
                     stroke="#44403c"
                     tick={{ fontSize: 10, fontWeight: 700 }}
-                    tickFormatter={(val) => `${(val / 1000).toLocaleString('uz-UZ')}k`}
+                    tickFormatter={(val) => {
+                      if (val >= 1000) return `$${(val / 1000).toFixed(1)}k`;
+                      return `$${val}`;
+                    }}
                     domain={['auto', 'auto']}
                     dx={-2}
                   />
@@ -1266,16 +1269,16 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                           <span className="break-words">{item.supplier}</span>
                         </td>
                         <td className="p-2 border-r border-amber-200 text-right font-mono font-black text-black whitespace-nowrap">
-                          {item.latestPrice.toLocaleString('uz-UZ')} so'm
+                          {formatUSD(item.latestPrice)}
                         </td>
                         <td className="p-2 border-r border-amber-200 text-right font-mono font-black text-emerald-800 whitespace-nowrap">
-                          {item.minPrice.toLocaleString('uz-UZ')} so'm
+                          {formatUSD(item.minPrice)}
                         </td>
                         <td className="p-2 border-r border-amber-200 text-right font-mono font-black text-rose-800 whitespace-nowrap">
-                          {item.maxPrice.toLocaleString('uz-UZ')} so'm
+                          {formatUSD(item.maxPrice)}
                         </td>
                         <td className="p-2 border-r border-amber-200 text-right font-mono font-black text-stone-800 whitespace-nowrap">
-                          {item.avgPrice.toLocaleString('uz-UZ')} so'm
+                          {formatUSD(item.avgPrice)}
                         </td>
                         <td className="p-2 border-r border-amber-200 text-center font-mono font-black">
                           {item.count}
@@ -1326,7 +1329,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                     <th className="p-1.5 border-r border-amber-300 w-24">Vaqt</th>
                     <th className="p-1.5 border-r border-amber-300 w-20">Brend</th>
                     <th className="p-1.5 border-r border-amber-300">Yetkazib beruvchi</th>
-                    <th className="p-1.5 border-r border-amber-300 text-right w-24">Narx (so'm)</th>
+                    <th className="p-1.5 border-r border-amber-300 text-right w-24">Narx ($)</th>
                     <th className="p-1.5 border-r border-amber-300 w-28">Manba</th>
                     <th className="p-1.5">Izoh</th>
                   </tr>
@@ -1343,7 +1346,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                       <td className="p-1.5 border-r border-amber-200 font-bold text-[10px] uppercase text-black">{item.brand}</td>
                       <td className="p-1.5 border-r border-amber-200 font-bold text-stone-900">{item.supplierName}</td>
                       <td className="p-1.5 border-r border-amber-200 text-right font-mono font-black text-black whitespace-nowrap">
-                        {Number(item.price).toLocaleString('uz-UZ')}
+                        {formatUSD(item.price)}
                       </td>
                       <td className="p-1.5 border-r border-amber-200 text-stone-700 text-[10px] sm:text-[11px]">{item.source}</td>
                       <td className="p-1.5 text-stone-600 text-[10px] sm:text-[11px]">{item.comment}</td>
@@ -1453,7 +1456,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                         <div className="text-right">
                           <span className="text-[9px] uppercase font-bold text-stone-500 block">Narxi:</span>
                           <span className="font-mono font-black text-xs sm:text-sm text-black">
-                            {step.currentPrice.toLocaleString('uz-UZ')} so'm
+                            {formatUSD(step.currentPrice)}
                           </span>
                         </div>
 
@@ -1469,12 +1472,12 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                           ) : isPositive ? (
                             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-rose-100 border border-rose-400 text-rose-800 font-mono font-black text-[10px]">
                               <ArrowUpRight className="w-3 h-3 stroke-[2.5]" />
-                              +{step.stepPercent}% (+{step.stepDiff.toLocaleString('uz-UZ')})
+                              +{step.stepPercent}% (+{formatUSD(step.stepDiff)})
                             </span>
                           ) : isNegative ? (
                             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-emerald-100 border border-emerald-400 text-emerald-800 font-mono font-black text-[10px]">
                               <ArrowDownRight className="w-3 h-3 stroke-[2.5]" />
-                              {step.stepPercent}% ({step.stepDiff.toLocaleString('uz-UZ')})
+                              {step.stepPercent}% ({formatUSD(step.stepDiff)})
                             </span>
                           ) : (
                             <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-stone-100 border border-stone-300 text-stone-700 font-mono font-bold text-[10px]">

@@ -86,7 +86,7 @@ const INITIAL_SAMPLE_AUTOPARTS: AutoPart[] = [
     partName: 'Oldi tormoz kolodkasi',
     brand: 'Sangsin Hi-Q',
     supplierName: '"Avto Detal Servis" MCHJ',
-    price: 175000,
+    price: 14.50,
     date: '2026-08-15',
     source: 'Rasmiy diler',
     comment: 'Cobalt va Gentra uchun original partiya',
@@ -99,7 +99,7 @@ const INITIAL_SAMPLE_AUTOPARTS: AutoPart[] = [
     partName: 'Oldi tormoz kolodkasi',
     brand: 'Sangsin Hi-Q',
     supplierName: 'Karimov Rustam Baxtiyorovich (YATT)',
-    price: 180000,
+    price: 15.00,
     date: '2026-08-20',
     source: 'Ulgurji bozor',
     comment: 'Koreya quti, sifatli',
@@ -112,7 +112,7 @@ const INITIAL_SAMPLE_AUTOPARTS: AutoPart[] = [
     partName: 'Oldi tormoz kolodkasi',
     brand: 'Sangsin Hi-Q',
     supplierName: '"Avto Detal Servis" MCHJ',
-    price: 182000,
+    price: 15.20,
     date: '2026-08-28',
     source: 'Rasmiy diler',
     comment: 'Yangi import partiyasi',
@@ -125,7 +125,7 @@ const INITIAL_SAMPLE_AUTOPARTS: AutoPart[] = [
     partName: 'Oldi tormoz kolodkasi',
     brand: 'Sangsin Hi-Q',
     supplierName: 'Karimov Rustam Baxtiyorovich (YATT)',
-    price: 178000,
+    price: 14.80,
     date: '2026-09-02',
     source: 'Bozor',
     comment: 'Chegirma bilan berildi',
@@ -138,7 +138,7 @@ const INITIAL_SAMPLE_AUTOPARTS: AutoPart[] = [
     partName: 'Oldi tormoz kolodkasi',
     brand: 'Sangsin Hi-Q',
     supplierName: '"Avto Detal Servis" MCHJ',
-    price: 185000,
+    price: 15.50,
     date: '2026-09-08',
     source: 'Rasmiy diler',
     comment: 'Oxirgi kelgan narx, kafolat 6 oy',
@@ -151,7 +151,7 @@ const INITIAL_SAMPLE_AUTOPARTS: AutoPart[] = [
     partName: 'Moy filtri (Oil Filter)',
     brand: 'Mann Filter',
     supplierName: 'Karimov Rustam Baxtiyorovich (YATT)',
-    price: 42000,
+    price: 3.50,
     date: '2026-08-25',
     source: 'Ulgurji bozor',
     comment: 'Nexia 3, Spark uchun',
@@ -164,7 +164,7 @@ const INITIAL_SAMPLE_AUTOPARTS: AutoPart[] = [
     partName: 'Moy filtri (Oil Filter)',
     brand: 'Mann Filter',
     supplierName: '"Avto Detal Servis" MCHJ',
-    price: 45000,
+    price: 3.75,
     date: '2026-09-08',
     source: 'Do\'kon',
     comment: 'Germaniya zavod',
@@ -177,7 +177,7 @@ const INITIAL_SAMPLE_AUTOPARTS: AutoPart[] = [
     partName: 'Oldi amortizator',
     brand: 'Mando',
     supplierName: '"Avto Detal Servis" MCHJ',
-    price: 340000,
+    price: 28.00,
     date: '2026-09-07',
     source: 'Koreya import',
     comment: 'Laziz va gaz-moyli, zavod kafolati mavjud',
@@ -382,7 +382,7 @@ export async function saveAutoPartToDb(
 
   const numericPrice = typeof data.price === 'number'
     ? data.price
-    : parseFloat(String(data.price).replace(/\s/g, '').replace(/,/g, '')) || 0;
+    : parseFloat(String(data.price).replace(/\s/g, '').replace(/,/g, '.')) || 0;
 
   if (existingPart) {
     const updated: AutoPart = {

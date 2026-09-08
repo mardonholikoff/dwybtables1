@@ -26,7 +26,8 @@ export interface Supplier {
   orderNumber: number; // 1-tartib raqam (avtomatik)
   systemTime: string; // 2-sistema vaqti (avtomatik)
   createdAt: number;
-  activityType: ActivityType; // 3-faoliyat turi (default: jismoniy)
+  activityType: ActivityType | string; // 3-faoliyat turi (jismoniy, yuridik yoki birgalikda)
+  activityTypes?: ActivityType[]; // bir nechta faoliyat turlari (ikkalasini ham tanlash imkoni)
   name: string; // 4-nom (majburiy)
   address: string; // 5-manzil (majburiy)
   phone: string; // 6-telefon raqam (majburiy)
@@ -49,7 +50,8 @@ export interface Supplier {
 }
 
 export interface SupplierFormData {
-  activityType: ActivityType;
+  activityType: ActivityType | string;
+  activityTypes?: ActivityType[];
   name: string;
   address: string;
   phone: string;

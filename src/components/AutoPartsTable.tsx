@@ -18,6 +18,7 @@ import {
 import { AutoPart } from '../types';
 import { exportAutoPartsToExcel } from '../utils/excelExport';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { formatUSD } from '../utils/formatCurrency';
 
 interface AutoPartsTableProps {
   parts: AutoPart[];
@@ -80,7 +81,7 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
               </span>
             </div>
             <p className="text-[11px] font-bold text-stone-700">
-              Jami qiymat: <span className="text-black font-black">{totalPrice.toLocaleString('uz-UZ')} so'm</span>
+              Jami qiymat: <span className="text-black font-black">{formatUSD(totalPrice)} USD</span>
             </p>
           </div>
         </div>
@@ -221,7 +222,7 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
                     {/* Narx */}
                     <div className="text-right shrink-0">
                       <div className="px-2 py-1 bg-yellow-200 border border-amber-500 font-mono font-black text-xs text-black shadow-2xs whitespace-nowrap">
-                        {Number(item.price).toLocaleString('uz-UZ')} so'm
+                        {formatUSD(item.price)}
                       </div>
                     </div>
                   </div>
@@ -314,7 +315,7 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
                     <th className="p-2 border-r border-amber-300 w-36">Avto ehtiyot qism</th>
                     <th className="p-2 border-r border-amber-300 w-24">Brend</th>
                     <th className="p-2 border-r border-amber-300 w-36">Yetkazib beruvchi</th>
-                    <th className="p-2 border-r border-amber-300 text-right w-28">Narx (so'm)</th>
+                    <th className="p-2 border-r border-amber-300 text-right w-28">Narx ($)</th>
                     <th className="p-2 border-r border-amber-300 text-center w-24">Sana</th>
                     <th className="p-2 border-r border-amber-300 w-28">Manba</th>
                     <th className="p-2 border-r border-amber-300 w-36">Izoh</th>
@@ -349,7 +350,7 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
                         <td className="p-2 border-r border-amber-200 font-black text-black break-words">{item.partName}</td>
                         <td className="p-2 border-r border-amber-200 font-black text-[10px] uppercase text-black">{item.brand}</td>
                         <td className="p-2 border-r border-amber-200 font-bold text-stone-800 break-words">{item.supplierName}</td>
-                        <td className="p-2 border-r border-amber-200 text-right font-mono font-black text-black whitespace-nowrap">{Number(item.price).toLocaleString('uz-UZ')}</td>
+                        <td className="p-2 border-r border-amber-200 text-right font-mono font-black text-black whitespace-nowrap">{formatUSD(item.price)}</td>
                         <td className="p-2 border-r border-amber-200 text-center font-mono text-[11px] text-stone-700 whitespace-nowrap">{item.date}</td>
                         <td className="p-2 border-r border-amber-200 text-stone-700 font-semibold">{item.source}</td>
                         <td className="p-2 border-r border-amber-200 text-stone-600 text-[11px]">{item.comment}</td>
@@ -411,7 +412,7 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
                 <th className="p-2 border-r border-amber-300">Avto ehtiyot qism</th>
                 <th className="p-2 border-r border-amber-300">Brend</th>
                 <th className="p-2 border-r border-amber-300">Yetkazib beruvchi</th>
-                <th className="p-2 border-r border-amber-300 text-right">Narx (so'm)</th>
+                <th className="p-2 border-r border-amber-300 text-right">Narx ($)</th>
                 <th className="p-2 border-r border-amber-300 text-center">Sana</th>
                 <th className="p-2 border-r border-amber-300">Manba</th>
                 <th className="p-2 border-r border-amber-300">Izoh</th>
@@ -472,7 +473,7 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
 
                     {/* 6. Narx */}
                     <td className="p-2 border-r border-amber-200 text-right font-mono font-black text-black whitespace-nowrap">
-                      {Number(item.price).toLocaleString('uz-UZ')}
+                      {formatUSD(item.price)}
                     </td>
 
                     {/* 7. Sana */}

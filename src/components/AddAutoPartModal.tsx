@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { AutoPart, AutoPartFormData, Supplier } from '../types';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
+import { formatUSD } from '../utils/formatCurrency';
 
 interface AddAutoPartModalProps {
   isOpen: boolean;
@@ -148,9 +149,10 @@ export const AddAutoPartModal: React.FC<AddAutoPartModalProps> = ({
     if (!formData.supplierName.trim()) {
       errs.supplierName = 'Yetkazib beruvchilar ro\'yxatidan tanlanishi shart (majburiy)';
     }
-    const numPrice = parseFloat(String(formData.price).replace(/\s/g, ''));
+    const rawPriceStr = String(formData.price).replace(/,/g, '.').replace(/\s/g, '');
+    const numPrice = parseFloat(rawPriceStr);
     if (!formData.price || isNaN(numPrice) || numPrice <= 0) {
-      errs.price = 'To\'g\'ri narx kiritilishi shart (0 dan katta bo\'lsin)';
+      errs.price = 'To\'g\'ri narx kiritilishi shart (0 dan yuqori son, masalan: 0.02, 1.5, 25)';
     }
     if (!formData.date.trim()) {
       errs.date = 'Sana kiritilishi shart (majburiy)';
@@ -158,9 +160,7 @@ export const AddAutoPartModal: React.FC<AddAutoPartModalProps> = ({
     if (!formData.source.trim()) {
       errs.source = 'Ma\'lumot manbaasi kiritilishi shart (majburiy)';
     }
-    if (!formData.comment.trim()) {
-      errs.comment = 'Izoh kiritilishi shart (majburiy)';
-    }
+    // Izoh qismi majburiy emas (ixtiyoriy)
 
     setErrors(errs);
     return Object.keys(errs).length === 0;
@@ -291,7 +291,7 @@ export const AddAutoPartModal: React.FC<AddAutoPartModalProps> = ({
                   </option>
                   {filteredExistingParts.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.partName} | {p.brand} | {p.supplierName} | {p.price.toLocaleString('uz-UZ')} so'm
+                      {p.partName} | {p.brand} | {p.supplierName} | {formatUSD(p.price)}
                     </option>
                   ))}
                 </select>
@@ -403,22 +403,22 @@ export const AddAutoPartModal: React.FC<AddAutoPartModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-black uppercase tracking-wider text-black block mb-1">
-                6. Narx (so'mda) <span className="text-rose-600">*</span>
+                6. Narx ($ / AQSH dollari) <span className="text-rose-600">*</span>
               </label>
               <input
                 type="number"
-                min="0"
-                step="1000"
+                min="0.0001"
+                step="any"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-                placeholder="Masalan: 185000"
+                placeholder="Masalan: 0.02 yoki 15.50 yoki 120"
                 className={`w-full px-3 py-2 text-xs border-2 bg-white text-black font-bold focus:outline-none rounded-none ${
                   errors.price ? 'border-rose-600 bg-rose-50' : 'border-amber-400 focus:border-amber-600'
                 }`}
               />
-              {formData.price && !isNaN(Number(formData.price)) && (
+              {formData.price && !isNaN(Number(String(formData.price).replace(',', '.'))) && (
                 <span className="text-[10px] font-black text-stone-700 block mt-0.5">
-                  {Number(formData.price).toLocaleString('uz-UZ')} so'm
+                  {formatUSD(formData.price)} USD
                 </span>
               )}
               {errors.price && (
@@ -469,25 +469,20 @@ export const AddAutoPartModal: React.FC<AddAutoPartModalProps> = ({
             )}
           </div>
 
-          {/* 9. Izoh */}
+          {/* 9. Izoh (Ixtiyoriy) */}
           <div>
-            <label className="text-xs font-black uppercase tracking-wider text-black block mb-1">
-              9. Izoh <span className="text-rose-600">*</span>
-            </label>
+            <div className="flex items-center justify-between mb-1">
+              <label className="text-xs font-black uppercase tracking-wider text-black block">
+                9. Izoh <span className="text-stone-600 text-[10px] font-semibold lowercase">(ixtiyoriy, majburiy emas)</span>
+              </label>
+            </div>
             <textarea
               rows={2}
               value={formData.comment}
               onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
-              placeholder="Mahsulot holati, sifati, avtomobil modeli (Cobalt, Gentra, Nexia), kafolat va boshqa eslatmalar..."
-              className={`w-full px-3 py-2 text-xs border-2 bg-white text-black font-bold focus:outline-none rounded-none resize-none ${
-                errors.comment ? 'border-rose-600 bg-rose-50' : 'border-amber-400 focus:border-amber-600'
-              }`}
+              placeholder="Mahsulot holati, sifati, avtomobil modeli (Cobalt, Gentra, Nexia), kafolat va boshqa eslatmalar (ixtiyoriy)..."
+              className="w-full px-3 py-2 text-xs border-2 border-amber-400 focus:border-amber-600 bg-white text-black font-bold focus:outline-none rounded-none resize-none"
             />
-            {errors.comment && (
-              <p className="mt-1 text-[11px] font-bold text-rose-600 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> {errors.comment}
-              </p>
-            )}
           </div>
 
           {/* Footer Actions */}

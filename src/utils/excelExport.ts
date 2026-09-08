@@ -11,7 +11,7 @@ export function exportSuppliersToExcel(suppliers: Supplier[], fileNamePrefix = '
     return {
       '№ (Tartib raqam)': item.orderNumber,
       'Sistema vaqti': item.systemTime,
-      'Faoliyat turi': item.activityType === 'jismoniy' ? 'Jismoniy shaxs' : 'Yuridik shaxs',
+      'Faoliyat turi': item.activityTypes && item.activityTypes.length > 0 ? item.activityTypes.join(' + ') : item.activityType,
       'Nom (Kompaniya / Shaxs)': item.name,
       'Manzil': item.address,
       'Telefon raqam': item.phone,
@@ -62,7 +62,7 @@ export function exportAutoPartsToExcel(parts: AutoPart[], fileNamePrefix = 'Avto
     'Avto ehtiyot qism nomi': item.partName,
     'Brend': item.brand,
     'Yetkazib beruvchi': item.supplierName,
-    'Narx (so\'m)': item.price,
+    'Narx ($ / USD)': item.price,
     'Sana': item.date,
     'Ma\'lumot manbaasi': item.source,
     'Izoh': item.comment,
