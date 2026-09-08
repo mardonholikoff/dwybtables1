@@ -2,7 +2,11 @@ export type ActivityType = 'jismoniy' | 'yuridik';
 
 export type PaymentMethod = 'naqd' | 'bank orqali' | 'bank kartalari orqali';
 
-export type PaymentConditionType = 'naqd joyida' | 'kechiktirib to\'lash';
+export type PaymentConditionType =
+  | 'naqd joyida'
+  | 'kechiktirib to\'lash'
+  | 'oldindan to\'lov (avans)'
+  | 'bo\'lib-bo\'lib to\'lash';
 
 export type QualityStability = 'yomon' | 'o\'rtacha' | 'yaxshi';
 
@@ -26,14 +30,21 @@ export interface Supplier {
   name: string; // 4-nom (majburiy)
   address: string; // 5-manzil (majburiy)
   phone: string; // 6-telefon raqam (majburiy)
-  paymentMethod: PaymentMethod; // 7-pul o'tkazmalari (default: naqd)
-  paymentCondition: PaymentConditionType; // 8-to'lov sharti (default: naqd joyida)
+  paymentMethod: PaymentMethod | string; // 7-pul o'tkazmalari (bir nechta bo'lishi mumkin)
+  paymentMethods?: string[]; // bir nechta pul o'tkazma turlari
+  paymentCondition: PaymentConditionType | string; // 8-to'lov sharti (bir nechta bo'lishi mumkin)
+  paymentConditions?: string[]; // bir nechta to'lov shartlari
   delayDays?: number | string; // agar kechiktirib to'lash bo'lsa kun
-  qualityStability: QualityStability; // 9-sifat barqarorligi (default: o'rtacha)
-  transparencyLevel: TransparencyLevel; // 10-shaffoflik darajasi (default: shaffof)
-  responsibility: ResponsibilityType; // 11-javobgarlik (default: mahsulot sifatiga ba'zida javob beradi)
-  disciplineLevel: DisciplineLevel; // 12-intizom darajasi (default: o'rtacha)
-  extras: ExtrasType; // 13-qo'shimchalar (default: yetkazib berish (pulli))
+  qualityStability: QualityStability; // 9-sifat barqarorligi
+  qualityScore?: number; // 1 dan 5 gacha baho
+  transparencyLevel: TransparencyLevel; // 10-shaffoflik darajasi
+  transparencyScore?: number; // 1 dan 5 gacha baho
+  responsibility: ResponsibilityType; // 11-javobgarlik
+  responsibilityScore?: number; // 1 dan 5 gacha baho
+  disciplineLevel: DisciplineLevel; // 12-intizom darajasi
+  disciplineScore?: number; // 1 dan 5 gacha baho
+  extras: ExtrasType; // 13-qo'shimchalar
+  extrasScore?: number; // 1 dan 5 gacha baho
   products?: string[]; // 14-taklif qilinadigan mahsulotlar ro'yxati (ixtiyoriy)
 }
 
@@ -42,15 +53,22 @@ export interface SupplierFormData {
   name: string;
   address: string;
   phone: string;
-  paymentMethod: PaymentMethod;
-  paymentCondition: PaymentConditionType;
+  paymentMethod: PaymentMethod | string;
+  paymentMethods: string[];
+  paymentCondition: PaymentConditionType | string;
+  paymentConditions: string[];
   delayDays: string;
   qualityStability: QualityStability;
+  qualityScore: number; // 1 dan 5 gacha baho
   transparencyLevel: TransparencyLevel;
+  transparencyScore: number; // 1 dan 5 gacha baho
   responsibility: ResponsibilityType;
+  responsibilityScore: number; // 1 dan 5 gacha baho
   disciplineLevel: DisciplineLevel;
+  disciplineScore: number; // 1 dan 5 gacha baho
   extras: ExtrasType;
-  products: string[]; // taklif qilinadigan mahsulotlar ro'yxati (ixtiyoriy)
+  extrasScore: number; // 1 dan 5 gacha baho
+  products: string[]; // taklif qilinadigan mahsulotlar ro'yxati
 }
 
 export interface UserSession {

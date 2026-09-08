@@ -182,7 +182,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-[1700px] w-full mx-auto p-3 sm:p-5 lg:p-6 space-y-4">
+      <main className="flex-1 max-w-[1700px] w-full mx-auto p-2 sm:p-4 lg:p-6 space-y-3 sm:space-y-4 min-w-0 overflow-x-hidden">
         {activeTab === 'suppliers' && (
           <SupplierTable
             suppliers={suppliers}
@@ -254,6 +254,7 @@ export default function App() {
         currentCount={autoParts.length}
         initialPart={editingAutoPart}
         suppliers={suppliers}
+        existingParts={autoParts}
       />
 
       {/* PWA Offline indicator */}

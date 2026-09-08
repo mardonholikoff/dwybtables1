@@ -129,79 +129,69 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* 2-qator: 1-jadval, 2-jadval va Tahlil TAB SWITCHER (Mobil bodyga moslangan, surilmaydigan, ixcham) */}
-        <div className="grid grid-cols-3 gap-1 sm:flex sm:items-center sm:gap-2 border-t border-amber-300/80 pt-2 w-full">
-          {/* 1-Jadval: Yetkazib beruvchilar */}
-          <button
-            type="button"
-            onClick={() => onTabChange('suppliers')}
-            className={`flex items-center justify-center gap-1 sm:gap-2 px-1 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-black transition cursor-pointer rounded-none border-2 text-center truncate ${
-              activeTab === 'suppliers'
-                ? 'bg-amber-400 border-amber-600 text-black shadow-xs ring-1 ring-amber-500'
-                : 'bg-yellow-200/80 hover:bg-yellow-300 border-amber-400 text-stone-800'
-            }`}
-            title="1-Jadval: Yetkazib beruvchilar"
-          >
-            <Users className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
-            <span className="hidden md:inline truncate">1-Jadval: Yetkazib beruvchilar</span>
-            <span className="hidden sm:inline md:hidden truncate">1-Jadval: Ta'minot</span>
-            <span className="sm:hidden truncate">1-Jadval</span>
-            <span
-              className={`px-1 sm:px-1.5 py-0.2 bg-white border border-amber-500 text-[10px] font-mono font-black shrink-0 ${
-                activeTab === 'suppliers' ? 'text-black' : 'text-stone-700'
+        {/* 2-qator: 1, 2 jadvallar va Tahlil (Mobil ekranga to'liq mos, sig'adigan, surilmaydigan) */}
+        <nav aria-label="Bo'limlar" className="w-full border-t border-amber-300/80 pt-1.5">
+          <div className="grid grid-cols-3 gap-1 sm:gap-2 w-full max-w-full">
+            {/* 1-Jadval: Yetkazib beruvchilar */}
+            <button
+              type="button"
+              onClick={() => onTabChange('suppliers')}
+              className={`min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-3 py-1.5 text-[10px] sm:text-xs font-black transition cursor-pointer rounded-none border-2 truncate ${
+                activeTab === 'suppliers'
+                  ? 'bg-amber-400 border-amber-600 text-black shadow-xs ring-1 ring-amber-500'
+                  : 'bg-yellow-200/80 hover:bg-yellow-300 border-amber-400 text-stone-800'
               }`}
+              title="1-Jadval: Yetkazib beruvchilar"
             >
-              {suppliersCount}
-            </span>
-          </button>
+              <Users className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5] shrink-0" />
+              <span className="truncate">1-Jadval</span>
+              <span
+                className={`hidden sm:inline-block px-1 py-0.2 bg-white border border-amber-500 text-[9px] font-mono font-black shrink-0 ${
+                  activeTab === 'suppliers' ? 'text-black' : 'text-stone-700'
+                }`}
+              >
+                {suppliersCount}
+              </span>
+            </button>
 
-          {/* 2-Jadval: Avto ehtiyot qismlar */}
-          <button
-            type="button"
-            onClick={() => onTabChange('autoparts')}
-            className={`flex items-center justify-center gap-1 sm:gap-2 px-1 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-black transition cursor-pointer rounded-none border-2 text-center truncate ${
-              activeTab === 'autoparts'
-                ? 'bg-amber-400 border-amber-600 text-black shadow-xs ring-1 ring-amber-500'
-                : 'bg-yellow-200/80 hover:bg-yellow-300 border-amber-400 text-stone-800'
-            }`}
-            title="2-Jadval: Avto ehtiyot qismlar"
-          >
-            <Wrench className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
-            <span className="hidden md:inline truncate">2-Jadval: Avto ehtiyot qismlar</span>
-            <span className="hidden sm:inline md:hidden truncate">2-Jadval: Qismlar</span>
-            <span className="sm:hidden truncate">2-Jadval</span>
-            <span
-              className={`px-1 sm:px-1.5 py-0.2 bg-white border border-amber-500 text-[10px] font-mono font-black shrink-0 ${
-                activeTab === 'autoparts' ? 'text-black' : 'text-stone-700'
+            {/* 2-Jadval: Avto ehtiyot qismlar */}
+            <button
+              type="button"
+              onClick={() => onTabChange('autoparts')}
+              className={`min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-3 py-1.5 text-[10px] sm:text-xs font-black transition cursor-pointer rounded-none border-2 truncate ${
+                activeTab === 'autoparts'
+                  ? 'bg-amber-400 border-amber-600 text-black shadow-xs ring-1 ring-amber-500'
+                  : 'bg-yellow-200/80 hover:bg-yellow-300 border-amber-400 text-stone-800'
               }`}
+              title="2-Jadval: Avto ehtiyot qismlar"
             >
-              {autoPartsCount}
-            </span>
-          </button>
+              <Wrench className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5] shrink-0" />
+              <span className="truncate">2-Jadval</span>
+              <span
+                className={`hidden sm:inline-block px-1 py-0.2 bg-white border border-amber-500 text-[9px] font-mono font-black shrink-0 ${
+                  activeTab === 'autoparts' ? 'text-black' : 'text-stone-700'
+                }`}
+              >
+                {autoPartsCount}
+              </span>
+            </button>
 
-          {/* 3-Bo'lim: Tahlil */}
-          <button
-            type="button"
-            onClick={() => onTabChange('analytics')}
-            className={`flex items-center justify-center gap-1 sm:gap-2 px-1 sm:px-3.5 py-1.5 text-[11px] sm:text-xs font-black transition cursor-pointer rounded-none border-2 text-center truncate ${
-              activeTab === 'analytics'
-                ? 'bg-amber-400 border-amber-600 text-black shadow-xs ring-1 ring-amber-500'
-                : 'bg-yellow-200/80 hover:bg-yellow-300 border-amber-400 text-stone-800'
-            }`}
-            title="3-Bo'lim: Narxlar tahlili"
-          >
-            <TrendingUp className="w-3.5 h-3.5 stroke-[2.5] shrink-0" />
-            <span className="hidden sm:inline truncate">3. Tahlil</span>
-            <span className="sm:hidden truncate">3. Tahlil</span>
-            <span
-              className={`hidden sm:inline-block px-1.5 py-0.2 bg-white border border-amber-500 text-[10px] font-mono font-black shrink-0 ${
-                activeTab === 'analytics' ? 'text-black' : 'text-stone-700'
+            {/* Tahlil */}
+            <button
+              type="button"
+              onClick={() => onTabChange('analytics')}
+              className={`min-w-0 flex items-center justify-center gap-1 sm:gap-1.5 px-1 sm:px-3 py-1.5 text-[10px] sm:text-xs font-black transition cursor-pointer rounded-none border-2 truncate ${
+                activeTab === 'analytics'
+                  ? 'bg-amber-400 border-amber-600 text-black shadow-xs ring-1 ring-amber-500'
+                  : 'bg-yellow-200/80 hover:bg-yellow-300 border-amber-400 text-stone-800'
               }`}
+              title="Tahlil bo'limi"
             >
-              Grafik
-            </span>
-          </button>
-        </div>
+              <TrendingUp className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5] shrink-0" />
+              <span className="truncate">Tahlil</span>
+            </button>
+          </div>
+        </nav>
       </div>
     </header>
   );

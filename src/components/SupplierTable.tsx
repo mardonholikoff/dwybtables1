@@ -33,6 +33,7 @@ import {
   CheckCheck,
   Search,
   X,
+  Check,
 } from 'lucide-react';
 import { Supplier } from '../types';
 import { exportSuppliersToExcel } from '../utils/excelExport';
@@ -79,10 +80,24 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
   const [filterDiscipline, setFilterDiscipline] = useState<string>('all');
   const [filterExtras, setFilterExtras] = useState<string>('all');
   const [filterResponsibility, setFilterResponsibility] = useState<string>('all');
+
+  // Bir nechta sifatlarni tick qilib tanlash (Multi-select checkbox filtrlari)
+  const [filterActivityList, setFilterActivityList] = useState<string[]>([]);
+  const [filterQualityList, setFilterQualityList] = useState<string[]>([]);
+  const [filterTransparencyList, setFilterTransparencyList] = useState<string[]>([]);
+  const [filterResponsibilityList, setFilterResponsibilityList] = useState<string[]>([]);
+  const [filterDisciplineList, setFilterDisciplineList] = useState<string[]>([]);
+  const [filterExtrasList, setFilterExtrasList] = useState<string[]>([]);
+  const [filterPaymentMethodsList, setFilterPaymentMethodsList] = useState<string[]>([]);
+  const [filterPaymentConditionsList, setFilterPaymentConditionsList] = useState<string[]>([]);
+  const [filterScoresList, setFilterScoresList] = useState<number[]>([]);
+  const [openColumnFilter, setOpenColumnFilter] = useState<string | null>(null);
+
   const [filterProducts, setFilterProducts] = useState<string[]>([]);
   const [filterProductSearch, setFilterProductSearch] = useState<string>('');
   const [isProductDropdownOpen, setIsProductDropdownOpen] = useState(false);
   const productDropdownRef = useRef<HTMLDivElement>(null);
+  const filterPopoverRef = useRef<HTMLDivElement>(null);
 
   // Tartiblash holatlari
   const [sortField, setSortField] = useState<SortField>(null);
@@ -100,6 +115,12 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
         !productDropdownRef.current.contains(event.target as Node)
       ) {
         setIsProductDropdownOpen(false);
+      }
+      if (
+        filterPopoverRef.current &&
+        !filterPopoverRef.current.contains(event.target as Node)
+      ) {
+        setOpenColumnFilter(null);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -245,6 +266,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
     if (filterAddress.trim()) count++;
     if (filterPhone.trim()) count++;
     if (filterActivity !== 'all') count++;
+    if (filterActivityList.length > 0) count++;
     if (filterPaymentMethod !== 'all') count++;
     if (filterPaymentCondition !== 'all') count++;
     if (filterQuality !== 'all') count++;
@@ -252,6 +274,14 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
     if (filterDiscipline !== 'all') count++;
     if (filterExtras !== 'all') count++;
     if (filterResponsibility !== 'all') count++;
+    if (filterQualityList.length > 0) count++;
+    if (filterTransparencyList.length > 0) count++;
+    if (filterResponsibilityList.length > 0) count++;
+    if (filterDisciplineList.length > 0) count++;
+    if (filterExtrasList.length > 0) count++;
+    if (filterPaymentMethodsList.length > 0) count++;
+    if (filterPaymentConditionsList.length > 0) count++;
+    if (filterScoresList.length > 0) count++;
     if (filterProducts.length > 0 || filterProductSearch.trim()) count++;
     if (sortField) count++;
     return count;
@@ -260,6 +290,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
     filterAddress,
     filterPhone,
     filterActivity,
+    filterActivityList,
     filterPaymentMethod,
     filterPaymentCondition,
     filterQuality,
@@ -267,6 +298,14 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
     filterDiscipline,
     filterExtras,
     filterResponsibility,
+    filterQualityList,
+    filterTransparencyList,
+    filterResponsibilityList,
+    filterDisciplineList,
+    filterExtrasList,
+    filterPaymentMethodsList,
+    filterPaymentConditionsList,
+    filterScoresList,
     filterProducts,
     filterProductSearch,
     sortField,
@@ -278,6 +317,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
     setFilterAddress('');
     setFilterPhone('');
     setFilterActivity('all');
+    setFilterActivityList([]);
     setFilterPaymentMethod('all');
     setFilterPaymentCondition('all');
     setFilterQuality('all');
@@ -285,6 +325,14 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
     setFilterDiscipline('all');
     setFilterExtras('all');
     setFilterResponsibility('all');
+    setFilterQualityList([]);
+    setFilterTransparencyList([]);
+    setFilterResponsibilityList([]);
+    setFilterDisciplineList([]);
+    setFilterExtrasList([]);
+    setFilterPaymentMethodsList([]);
+    setFilterPaymentConditionsList([]);
+    setFilterScoresList([]);
     setFilterProducts([]);
     setFilterProductSearch('');
     setSortField(null);
@@ -319,35 +367,67 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
       if (filterPhone.trim() && !item.phone.toLowerCase().includes(filterPhone.toLowerCase().trim())) {
         return false;
       }
-      // 3. Faoliyat turi
+      // 3. Faoliyat turi (select filtri)
       if (filterActivity !== 'all' && item.activityType !== filterActivity) {
         return false;
       }
-      // 7. Pul o'tkazmalari
-      if (filterPaymentMethod !== 'all' && item.paymentMethod !== filterPaymentMethod) {
+      // 3. Faoliyat turi (bir nechta tick orqali)
+      if (filterActivityList.length > 0 && !filterActivityList.includes(item.activityType)) {
         return false;
       }
-      // 8. To'lov sharti
-      if (filterPaymentCondition !== 'all' && item.paymentCondition !== filterPaymentCondition) {
-        return false;
+      // 7. Pul o'tkazmalari (select filtri)
+      if (filterPaymentMethod !== 'all') {
+        const methods = item.paymentMethods && item.paymentMethods.length > 0 ? item.paymentMethods : [item.paymentMethod];
+        if (!methods.includes(filterPaymentMethod)) return false;
       }
-      // 9. Sifat barqarorligi
+      // 7. Pul o'tkazmalari (bir nechta tick orqali ko'p tanlovli filtr)
+      if (filterPaymentMethodsList.length > 0) {
+        const methods = item.paymentMethods && item.paymentMethods.length > 0 ? item.paymentMethods : [item.paymentMethod];
+        if (!methods.some((m) => filterPaymentMethodsList.includes(m))) return false;
+      }
+      // 8. To'lov sharti (select filtri)
+      if (filterPaymentCondition !== 'all') {
+        const conditions = item.paymentConditions && item.paymentConditions.length > 0 ? item.paymentConditions : [item.paymentCondition];
+        if (!conditions.some((c) => c.includes(filterPaymentCondition) || filterPaymentCondition.includes(c))) return false;
+      }
+      // 8. To'lov shartlari (bir nechta tick orqali ko'p tanlovli filtr)
+      if (filterPaymentConditionsList.length > 0) {
+        const conditions = item.paymentConditions && item.paymentConditions.length > 0 ? item.paymentConditions : [item.paymentCondition];
+        if (!conditions.some((c) => filterPaymentConditionsList.some((fc) => c.includes(fc) || fc.includes(c)))) return false;
+      }
+      // 9. Sifat barqarorligi (select filtri)
       if (filterQuality !== 'all' && item.qualityStability !== filterQuality) {
         return false;
       }
-      // 10. Shaffoflik darajasi
+      // 9. Sifat barqarorligi (bir nechta tick orqali)
+      if (filterQualityList.length > 0 && !filterQualityList.includes(item.qualityStability)) {
+        return false;
+      }
+      // 10. Shaffoflik darajasi (select filtri)
       if (filterTransparency !== 'all' && item.transparencyLevel !== filterTransparency) {
         return false;
       }
-      // 12. Intizom darajasi
+      // 10. Shaffoflik darajasi (bir nechta tick orqali)
+      if (filterTransparencyList.length > 0 && !filterTransparencyList.includes(item.transparencyLevel)) {
+        return false;
+      }
+      // 12. Intizom darajasi (select filtri)
       if (filterDiscipline !== 'all' && item.disciplineLevel !== filterDiscipline) {
         return false;
       }
-      // 13. Qo'shimchalar
+      // 12. Intizom darajasi (bir nechta tick orqali)
+      if (filterDisciplineList.length > 0 && !filterDisciplineList.includes(item.disciplineLevel)) {
+        return false;
+      }
+      // 13. Qo'shimchalar (select filtri)
       if (filterExtras !== 'all' && !item.extras.includes(filterExtras)) {
         return false;
       }
-      // 11. Javobgarlik
+      // 13. Qo'shimchalar (bir nechta tick orqali)
+      if (filterExtrasList.length > 0 && !filterExtrasList.some((ex) => item.extras.includes(ex))) {
+        return false;
+      }
+      // 11. Javobgarlik (select filtri)
       if (filterResponsibility !== 'all') {
         if (filterResponsibility === 'javob beradi' && item.responsibility !== 'mahsulot sifatiga javob beradi') {
           return false;
@@ -356,6 +436,23 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
           return false;
         }
         if (filterResponsibility === 'javob bermaydi' && item.responsibility !== 'mahsulot sifatiga javob bermaydi') {
+          return false;
+        }
+      }
+      // 11. Javobgarlik (bir nechta tick orqali)
+      if (filterResponsibilityList.length > 0 && !filterResponsibilityList.includes(item.responsibility)) {
+        return false;
+      }
+
+      // Baholar bo'yicha tick filtri (agar 1-5 ballik baholar tick qilingan bo'lsa - yetkazib berish bahosiz)
+      if (filterScoresList.length > 0) {
+        const itemScores = [
+          item.qualityScore || 4,
+          item.transparencyScore || 4,
+          item.responsibilityScore || 4,
+          item.disciplineScore || 4,
+        ];
+        if (!itemScores.some((sc) => filterScoresList.includes(sc))) {
           return false;
         }
       }
@@ -410,6 +507,7 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
     filterAddress,
     filterPhone,
     filterActivity,
+    filterActivityList,
     filterPaymentMethod,
     filterPaymentCondition,
     filterQuality,
@@ -417,6 +515,14 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
     filterDiscipline,
     filterExtras,
     filterResponsibility,
+    filterQualityList,
+    filterTransparencyList,
+    filterResponsibilityList,
+    filterDisciplineList,
+    filterExtrasList,
+    filterPaymentMethodsList,
+    filterPaymentConditionsList,
+    filterScoresList,
     filterProducts,
     filterProductSearch,
     sortField,
@@ -429,6 +535,164 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
       return;
     }
     exportSuppliersToExcel(filteredAndSortedSuppliers);
+  };
+
+  // Bir nechta sifat va to'lov shartlarini tick qilib tanlash popoveri
+  const renderMultiFilterDropdown = (
+    id: string,
+    label: string,
+    selectedList: string[],
+    options: { value: string; label: string }[],
+    onToggle: (val: string) => void,
+    onSelectAll: () => void,
+    onClear: () => void
+  ) => {
+    const isOpen = openColumnFilter === id;
+    const isFiltered = selectedList.length > 0;
+
+    return (
+      <div className="relative" ref={isOpen ? filterPopoverRef : undefined}>
+        <button
+          type="button"
+          onClick={() => setOpenColumnFilter(isOpen ? null : id)}
+          className={`w-full px-1 py-0.5 text-[9px] font-black border flex items-center justify-between gap-0.5 transition cursor-pointer rounded-none text-left h-[24px] ${
+            isFiltered
+              ? 'bg-amber-400 border-amber-600 text-black shadow-xs ring-1 ring-amber-500'
+              : 'bg-white hover:bg-yellow-100 border-amber-300 text-black'
+          }`}
+          title={`${label} filtri (Checkbox orqali tanlash)`}
+        >
+          <span className="truncate">
+            {selectedList.length === 0 ? 'Barchasi' : `${selectedList.length} ta ✓`}
+          </span>
+          <ChevronDown
+            className={`w-2.5 h-2.5 shrink-0 transition-transform ${
+              isOpen ? 'rotate-180 text-black' : 'text-stone-700'
+            }`}
+          />
+        </button>
+
+        {isOpen && (
+          <div className="absolute top-full left-0 z-50 mt-1 w-52 bg-amber-50 border-2 border-amber-500 shadow-2xl p-2 text-black rounded-none animate-in fade-in zoom-in-95 duration-100">
+            <div className="flex items-center justify-between border-b border-amber-300 pb-1 mb-1.5">
+              <span className="text-[10px] font-black uppercase text-black font-heading">
+                {label} (Tick)
+              </span>
+              <button
+                type="button"
+                onClick={() => setOpenColumnFilter(null)}
+                className="text-stone-600 hover:text-black p-0.5 cursor-pointer"
+                title="Yopish"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+
+            {/* Barchasi va Tozalash */}
+            <div className="flex items-center justify-between gap-1 mb-1.5">
+              <button
+                type="button"
+                onClick={onSelectAll}
+                className="px-1.5 py-0.5 bg-yellow-200 hover:bg-yellow-300 text-black border border-amber-400 text-[9px] font-black cursor-pointer rounded-none"
+              >
+                Barchasi
+              </button>
+              <button
+                type="button"
+                onClick={onClear}
+                className="px-1.5 py-0.5 bg-yellow-200 hover:bg-rose-200 text-black hover:text-rose-800 border border-amber-400 text-[9px] font-black cursor-pointer rounded-none"
+              >
+                Tozalash
+              </button>
+            </div>
+
+            {/* Checkbox ro'yxati */}
+            <div className="max-h-40 overflow-y-auto space-y-1 p-1 bg-white border border-amber-300">
+              {options.map((opt) => {
+                const isChecked = selectedList.includes(opt.value);
+                return (
+                  <button
+                    type="button"
+                    key={opt.value}
+                    onClick={() => onToggle(opt.value)}
+                    className={`w-full flex items-center gap-1.5 px-1.5 py-1 text-[9px] font-bold border transition select-none cursor-pointer text-left rounded-none active:scale-[0.98] ${
+                      isChecked
+                        ? 'bg-amber-300 border-amber-500 text-black'
+                        : 'hover:bg-yellow-50 border-transparent text-stone-800'
+                    }`}
+                  >
+                    <div
+                      className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 rounded-none transition-colors ${
+                        isChecked ? 'bg-amber-600 border-amber-700 text-white' : 'bg-white border-stone-400'
+                      }`}
+                    >
+                      {isChecked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                    </div>
+                    <span className="truncate flex-1">{opt.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Pastki qism */}
+            <div className="flex items-center justify-between pt-1.5 mt-1.5 border-t border-amber-300 text-[9px]">
+              <span className="font-bold text-stone-700">
+                {selectedList.length > 0 ? `${selectedList.length} ta tanlandi` : 'Hammasi'}
+              </span>
+              <button
+                type="button"
+                onClick={() => setOpenColumnFilter(null)}
+                className="px-2 py-0.5 bg-amber-400 hover:bg-amber-500 text-black font-black border border-amber-600 cursor-pointer rounded-none shadow-xs"
+              >
+                Tayyor
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // 5 ta yulduz ma'nolari (Foydalanuvchi talabi asosida)
+  // Sifat barqarorligi: 1-2 yomon, 3 o'rtacha, 4-5 yaxshi
+  const getQualityScoreInfo = (score: number) => {
+    if (score <= 2) {
+      return { text: 'yomon', color: 'bg-rose-100 text-rose-950 border-rose-500', explanation: "1-2★: yomon" };
+    }
+    if (score === 3) {
+      return { text: "o'rtacha", color: 'bg-yellow-200 text-amber-950 border-amber-500', explanation: "3★: o'rtacha" };
+    }
+    return { text: 'yaxshi', color: 'bg-emerald-100 text-emerald-950 border-emerald-600', explanation: "4-5★: yaxshi" };
+  };
+
+  // Shaffoflik darajasi: 1-3 shubhali, 4-5 shaffof
+  const getTransparencyScoreInfo = (score: number) => {
+    if (score <= 3) {
+      return { text: 'shubhali', color: 'bg-rose-100 text-rose-950 border-rose-500', explanation: "1-3★: shubhali" };
+    }
+    return { text: 'shaffof', color: 'bg-blue-100 text-blue-950 border-blue-600', explanation: "4-5★: shaffof" };
+  };
+
+  // Javobgarlik: 1-2 javob bermaydi, 3 ba'zida javob beradi, 4-5 javob beradi
+  const getResponsibilityScoreInfo = (score: number) => {
+    if (score <= 2) {
+      return { text: 'javob bermaydi', color: 'bg-rose-100 text-rose-950 border-rose-500', explanation: "1-2★: javob bermaydi" };
+    }
+    if (score === 3) {
+      return { text: "ba'zida", color: 'bg-yellow-200 text-amber-950 border-amber-500', explanation: "3★: ba'zida javob beradi" };
+    }
+    return { text: 'javob beradi', color: 'bg-emerald-100 text-emerald-950 border-emerald-600', explanation: "4-5★: javob beradi" };
+  };
+
+  // Intizom darajasi: 1-2 kechikadi, 3 o'rtacha, 4-5 vaqtida
+  const getDisciplineScoreInfo = (score: number) => {
+    if (score <= 2) {
+      return { text: 'kechikadi', color: 'bg-rose-100 text-rose-950 border-rose-500', explanation: "1-2★: kechikadi" };
+    }
+    if (score === 3) {
+      return { text: "o'rtacha", color: 'bg-yellow-200 text-amber-950 border-amber-500', explanation: "3★: o'rtacha" };
+    }
+    return { text: 'vaqtida', color: 'bg-emerald-100 text-emerald-950 border-emerald-600', explanation: "4-5★: vaqtida" };
   };
 
   // Badge yordamchilari
@@ -773,119 +1037,461 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
               />
             </div>
 
-            {/* 3. Faoliyat turi */}
-            <div>
-              <label className="text-[10px] font-black uppercase text-stone-700 block mb-1">
-                3. Faoliyat turi
-              </label>
-              <select
-                value={filterActivity}
-                onChange={(e) => setFilterActivity(e.target.value)}
-                className="w-full px-2.5 py-1.5 border border-amber-400 bg-white text-xs font-bold rounded-none"
-              >
-                <option value="all">Barchasi</option>
-                <option value="jismoniy">jismoniy</option>
-                <option value="yuridik">yuridik</option>
-              </select>
+            {/* 3. Faoliyat turi (Tick orqali tanlash) */}
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-black uppercase text-stone-700">
+                  3. Faoliyat turi (Tick)
+                </label>
+                {filterActivityList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterActivityList([])}
+                    className="text-[9px] underline font-bold text-stone-600 cursor-pointer"
+                  >
+                    Tozalash
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5 p-1 bg-white border border-amber-300">
+                {[
+                  { value: 'jismoniy', label: 'jismoniy shaxs' },
+                  { value: 'yuridik', label: 'yuridik shaxs' },
+                ].map((act) => {
+                  const isChecked = filterActivityList.includes(act.value);
+                  return (
+                    <label
+                      key={act.value}
+                      className={`flex items-center gap-1.5 px-2 py-1 border text-xs font-bold transition select-none cursor-pointer rounded-none ${
+                        isChecked
+                          ? 'bg-amber-300 border-amber-600 text-black'
+                          : 'bg-yellow-50 hover:bg-amber-100 border-amber-200 text-stone-800'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() =>
+                          setFilterActivityList((prev) =>
+                            prev.includes(act.value)
+                              ? prev.filter((x) => x !== act.value)
+                              : [...prev, act.value]
+                          )
+                        }
+                        className="w-3.5 h-3.5 accent-amber-600 border-amber-400 rounded-none cursor-pointer"
+                      />
+                      <span>{act.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* 7. Pul o'tkazmalari */}
-            <div>
-              <label className="text-[10px] font-black uppercase text-stone-700 block mb-1">
-                7. Pul o'tkazmalari
-              </label>
-              <select
-                value={filterPaymentMethod}
-                onChange={(e) => setFilterPaymentMethod(e.target.value)}
-                className="w-full px-2.5 py-1.5 border border-amber-400 bg-white text-xs font-bold rounded-none"
-              >
-                <option value="all">Barchasi</option>
-                <option value="naqd">naqd</option>
-                <option value="bank orqali">bank orqali</option>
-                <option value="bank kartalari orqali">bank kartalari orqali</option>
-              </select>
+            {/* 7. Pul o'tkazmalari (Tick orqali bir nechtasini tanlash) */}
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-black uppercase text-stone-700">
+                  7. Pul o'tkazmalari (Tick)
+                </label>
+                {filterPaymentMethodsList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterPaymentMethodsList([])}
+                    className="text-[9px] underline font-bold text-stone-600 cursor-pointer"
+                  >
+                    Tozalash
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5 p-1 bg-white border border-amber-300">
+                {[
+                  { value: 'naqd', label: 'naqd' },
+                  { value: 'bank orqali', label: 'bank orqali' },
+                  { value: 'bank kartalari orqali', label: 'bank kartalari' },
+                ].map((pm) => {
+                  const isChecked = filterPaymentMethodsList.includes(pm.value);
+                  return (
+                    <button
+                      type="button"
+                      key={pm.value}
+                      onClick={() =>
+                        setFilterPaymentMethodsList((prev) =>
+                          prev.includes(pm.value)
+                            ? prev.filter((x) => x !== pm.value)
+                            : [...prev, pm.value]
+                        )
+                      }
+                      className={`flex items-center gap-1.5 px-2.5 py-1 border text-xs font-bold transition select-none cursor-pointer rounded-none active:scale-[0.98] ${
+                        isChecked
+                          ? 'bg-amber-300 border-amber-600 text-black'
+                          : 'bg-yellow-50 hover:bg-amber-100 border-amber-200 text-stone-800'
+                      }`}
+                    >
+                      <div
+                        className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 rounded-none transition-colors ${
+                          isChecked ? 'bg-amber-600 border-amber-700 text-white' : 'bg-white border-stone-400'
+                        }`}
+                      >
+                        {isChecked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                      </div>
+                      <span>{pm.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* 8. To'lov shartlari */}
-            <div>
-              <label className="text-[10px] font-black uppercase text-stone-700 block mb-1">
-                8. To'lov shartlari
-              </label>
-              <select
-                value={filterPaymentCondition}
-                onChange={(e) => setFilterPaymentCondition(e.target.value)}
-                className="w-full px-2.5 py-1.5 border border-amber-400 bg-white text-xs font-bold rounded-none"
-              >
-                <option value="all">Barchasi</option>
-                <option value="naqd joyida">naqd joyida</option>
-                <option value="kechiktirib to'lash">kechiktirib to'lash</option>
-              </select>
+            {/* 8. To'lov shartlari (Tick orqali bir nechtasini tanlash) */}
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-black uppercase text-stone-700">
+                  8. To'lov shartlari (Tick)
+                </label>
+                {filterPaymentConditionsList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterPaymentConditionsList([])}
+                    className="text-[9px] underline font-bold text-stone-600 cursor-pointer"
+                  >
+                    Tozalash
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5 p-1 bg-white border border-amber-300">
+                {[
+                  { value: 'naqd joyida', label: 'naqd joyida' },
+                  { value: "kechiktirib to'lash", label: "kechiktirib to'lash" },
+                  { value: "oldindan to'lov (avans)", label: "oldindan to'lov" },
+                  { value: "bo'lib-bo'lib to'lash", label: "bo'lib-bo'lib" },
+                ].map((pc) => {
+                  const isChecked = filterPaymentConditionsList.includes(pc.value);
+                  return (
+                    <button
+                      type="button"
+                      key={pc.value}
+                      onClick={() =>
+                        setFilterPaymentConditionsList((prev) =>
+                          prev.includes(pc.value)
+                            ? prev.filter((x) => x !== pc.value)
+                            : [...prev, pc.value]
+                        )
+                      }
+                      className={`flex items-center gap-1.5 px-2.5 py-1 border text-xs font-bold transition select-none cursor-pointer rounded-none active:scale-[0.98] ${
+                        isChecked
+                          ? 'bg-amber-300 border-amber-600 text-black'
+                          : 'bg-yellow-50 hover:bg-amber-100 border-amber-200 text-stone-800'
+                      }`}
+                    >
+                      <div
+                        className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 rounded-none transition-colors ${
+                          isChecked ? 'bg-amber-600 border-amber-700 text-white' : 'bg-white border-stone-400'
+                        }`}
+                      >
+                        {isChecked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                      </div>
+                      <span>{pc.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* 9. Sifat barqarorligi */}
+            {/* 9. Sifat barqarorligi (Tick) */}
             <div>
-              <label className="text-[10px] font-black uppercase text-stone-700 block mb-1">
-                9. Sifat barqarorligi
-              </label>
-              <select
-                value={filterQuality}
-                onChange={(e) => setFilterQuality(e.target.value)}
-                className="w-full px-2.5 py-1.5 border border-amber-400 bg-white text-xs font-bold rounded-none"
-              >
-                <option value="all">Barchasi</option>
-                <option value="yaxshi">yaxshi</option>
-                <option value="o'rtacha">o'rtacha</option>
-                <option value="yomon">yomon</option>
-              </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-black uppercase text-stone-700">
+                  9. Sifat (Tick)
+                </label>
+                {filterQualityList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterQualityList([])}
+                    className="text-[9px] underline font-bold text-stone-600 cursor-pointer"
+                  >
+                    Tozalash
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-1 p-1 bg-white border border-amber-300">
+                {[
+                  { value: 'yaxshi', label: 'yaxshi' },
+                  { value: "o'rtacha", label: "o'rtacha" },
+                  { value: 'yomon', label: 'yomon' },
+                ].map((q) => {
+                  const isChecked = filterQualityList.includes(q.value);
+                  return (
+                    <label
+                      key={q.value}
+                      className={`flex items-center gap-1.5 px-2 py-0.5 border text-xs font-bold transition select-none cursor-pointer rounded-none ${
+                        isChecked
+                          ? 'bg-amber-300 border-amber-600 text-black'
+                          : 'bg-yellow-50 hover:bg-amber-100 border-amber-200 text-stone-800'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() =>
+                          setFilterQualityList((prev) =>
+                            prev.includes(q.value)
+                              ? prev.filter((x) => x !== q.value)
+                              : [...prev, q.value]
+                          )
+                        }
+                        className="w-3.5 h-3.5 accent-amber-600 border-amber-400 rounded-none cursor-pointer"
+                      />
+                      <span>{q.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* 10. Shaffoflik darajasi */}
+            {/* 10. Shaffoflik darajasi (Tick) */}
             <div>
-              <label className="text-[10px] font-black uppercase text-stone-700 block mb-1">
-                10. Shaffoflik darajasi
-              </label>
-              <select
-                value={filterTransparency}
-                onChange={(e) => setFilterTransparency(e.target.value)}
-                className="w-full px-2.5 py-1.5 border border-amber-400 bg-white text-xs font-bold rounded-none"
-              >
-                <option value="all">Barchasi</option>
-                <option value="shaffof">shaffof</option>
-                <option value="shubhali">shubhali</option>
-              </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-black uppercase text-stone-700">
+                  10. Shaffoflik (Tick)
+                </label>
+                {filterTransparencyList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterTransparencyList([])}
+                    className="text-[9px] underline font-bold text-stone-600 cursor-pointer"
+                  >
+                    Tozalash
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-1 p-1 bg-white border border-amber-300">
+                {[
+                  { value: 'shaffof', label: 'shaffof' },
+                  { value: 'shubhali', label: 'shubhali' },
+                ].map((t) => {
+                  const isChecked = filterTransparencyList.includes(t.value);
+                  return (
+                    <label
+                      key={t.value}
+                      className={`flex items-center gap-1.5 px-2 py-0.5 border text-xs font-bold transition select-none cursor-pointer rounded-none ${
+                        isChecked
+                          ? 'bg-amber-300 border-amber-600 text-black'
+                          : 'bg-yellow-50 hover:bg-amber-100 border-amber-200 text-stone-800'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() =>
+                          setFilterTransparencyList((prev) =>
+                            prev.includes(t.value)
+                              ? prev.filter((x) => x !== t.value)
+                              : [...prev, t.value]
+                          )
+                        }
+                        className="w-3.5 h-3.5 accent-amber-600 border-amber-400 rounded-none cursor-pointer"
+                      />
+                      <span>{t.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* 12. Intizom darajasi */}
+            {/* 11. Javobgarlik (Tick) */}
             <div>
-              <label className="text-[10px] font-black uppercase text-stone-700 block mb-1">
-                12. Intizom darajasi
-              </label>
-              <select
-                value={filterDiscipline}
-                onChange={(e) => setFilterDiscipline(e.target.value)}
-                className="w-full px-2.5 py-1.5 border border-amber-400 bg-white text-xs font-bold rounded-none"
-              >
-                <option value="all">Barchasi</option>
-                <option value="vaqtida">vaqtida</option>
-                <option value="o'rtacha">o'rtacha</option>
-                <option value="kechikadi">kechikadi</option>
-              </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-black uppercase text-stone-700">
+                  11. Javobgarlik (Tick)
+                </label>
+                {filterResponsibilityList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterResponsibilityList([])}
+                    className="text-[9px] underline font-bold text-stone-600 cursor-pointer"
+                  >
+                    Tozalash
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-1 p-1 bg-white border border-amber-300">
+                {[
+                  { value: 'mahsulot sifatiga javob beradi', label: 'javob beradi' },
+                  { value: "mahsulot sifatiga ba'zida javob beradi", label: "ba'zida javob beradi" },
+                  { value: 'mahsulot sifatiga javob bermaydi', label: 'javob bermaydi' },
+                ].map((r) => {
+                  const isChecked = filterResponsibilityList.includes(r.value);
+                  return (
+                    <label
+                      key={r.value}
+                      className={`flex items-center gap-1.5 px-2 py-0.5 border text-xs font-bold transition select-none cursor-pointer rounded-none ${
+                        isChecked
+                          ? 'bg-amber-300 border-amber-600 text-black'
+                          : 'bg-yellow-50 hover:bg-amber-100 border-amber-200 text-stone-800'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() =>
+                          setFilterResponsibilityList((prev) =>
+                            prev.includes(r.value)
+                              ? prev.filter((x) => x !== r.value)
+                              : [...prev, r.value]
+                          )
+                        }
+                        className="w-3.5 h-3.5 accent-amber-600 border-amber-400 rounded-none cursor-pointer"
+                      />
+                      <span>{r.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* 13. Qo'shimchalar */}
+            {/* 12. Intizom darajasi (Tick) */}
             <div>
-              <label className="text-[10px] font-black uppercase text-stone-700 block mb-1">
-                13. Qo'shimchalar
-              </label>
-              <select
-                value={filterExtras}
-                onChange={(e) => setFilterExtras(e.target.value)}
-                className="w-full px-2.5 py-1.5 border border-amber-400 bg-white text-xs font-bold rounded-none"
-              >
-                <option value="all">Barchasi</option>
-                <option value="pulli">yetkazib berish (pulli)</option>
-                <option value="bepul">yetkazib berish (bepul)</option>
-              </select>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-black uppercase text-stone-700">
+                  12. Intizom (Tick)
+                </label>
+                {filterDisciplineList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterDisciplineList([])}
+                    className="text-[9px] underline font-bold text-stone-600 cursor-pointer"
+                  >
+                    Tozalash
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-1 p-1 bg-white border border-amber-300">
+                {[
+                  { value: 'vaqtida', label: 'vaqtida' },
+                  { value: "o'rtacha", label: "o'rtacha" },
+                  { value: 'kechikadi', label: 'kechikadi' },
+                ].map((d) => {
+                  const isChecked = filterDisciplineList.includes(d.value);
+                  return (
+                    <label
+                      key={d.value}
+                      className={`flex items-center gap-1.5 px-2 py-0.5 border text-xs font-bold transition select-none cursor-pointer rounded-none ${
+                        isChecked
+                          ? 'bg-amber-300 border-amber-600 text-black'
+                          : 'bg-yellow-50 hover:bg-amber-100 border-amber-200 text-stone-800'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() =>
+                          setFilterDisciplineList((prev) =>
+                            prev.includes(d.value)
+                              ? prev.filter((x) => x !== d.value)
+                              : [...prev, d.value]
+                          )
+                        }
+                        className="w-3.5 h-3.5 accent-amber-600 border-amber-400 rounded-none cursor-pointer"
+                      />
+                      <span>{d.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* 13. Qo'shimchalar (Tick) */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-black uppercase text-stone-700">
+                  13. Qo'shimchalar (Tick)
+                </label>
+                {filterExtrasList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterExtrasList([])}
+                    className="text-[9px] underline font-bold text-stone-600 cursor-pointer"
+                  >
+                    Tozalash
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-col gap-1 p-1 bg-white border border-amber-300">
+                {[
+                  { value: 'bepul', label: 'yetkazib berish (bepul)' },
+                  { value: 'pulli', label: 'yetkazib berish (pulli)' },
+                ].map((ex) => {
+                  const isChecked = filterExtrasList.includes(ex.value);
+                  return (
+                    <label
+                      key={ex.value}
+                      className={`flex items-center gap-1.5 px-2 py-0.5 border text-xs font-bold transition select-none cursor-pointer rounded-none ${
+                        isChecked
+                          ? 'bg-amber-300 border-amber-600 text-black'
+                          : 'bg-yellow-50 hover:bg-amber-100 border-amber-200 text-stone-800'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() =>
+                          setFilterExtrasList((prev) =>
+                            prev.includes(ex.value)
+                              ? prev.filter((x) => x !== ex.value)
+                              : [...prev, ex.value]
+                          )
+                        }
+                        className="w-3.5 h-3.5 accent-amber-600 border-amber-400 rounded-none cursor-pointer"
+                      />
+                      <span>{ex.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Sifatlar baholari (1-5★ Tick filtri) */}
+            <div className="sm:col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-black uppercase text-stone-700">
+                  Baholar (1 dan 5 gacha baholangan sifatlar)
+                </label>
+                {filterScoresList.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setFilterScoresList([])}
+                    className="text-[9px] underline font-bold text-stone-600 cursor-pointer"
+                  >
+                    Tozalash
+                  </button>
+                )}
+              </div>
+              <div className="flex flex-wrap gap-1.5 p-1 bg-white border border-amber-300">
+                {[5, 4, 3, 2, 1].map((score) => {
+                  const isChecked = filterScoresList.includes(score);
+                  return (
+                    <label
+                      key={score}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 border text-xs font-black transition select-none cursor-pointer rounded-none ${
+                        isChecked
+                          ? 'bg-amber-300 border-amber-600 text-black shadow-2xs'
+                          : 'bg-yellow-50 hover:bg-amber-100 border-amber-200 text-stone-800'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() =>
+                          setFilterScoresList((prev) =>
+                            prev.includes(score) ? prev.filter((x) => x !== score) : [...prev, score]
+                          )
+                        }
+                        className="w-3.5 h-3.5 accent-amber-600 border-amber-400 rounded-none cursor-pointer"
+                      />
+                      <span>{score} ★</span>
+                    </label>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -1097,11 +1703,56 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
 
                 <th className="p-1.5 text-left border-r border-amber-400">7. O'tkazma</th>
                 <th className="p-1.5 text-left border-r border-amber-400">8. To'lov sharti</th>
-                <th className="p-1.5 text-left border-r border-amber-400">9. Sifat</th>
-                <th className="p-1.5 text-left border-r border-amber-400">10. Shaffof</th>
-                <th className="p-1.5 text-left border-r border-amber-400">11. Javobgarlik</th>
-                <th className="p-1.5 text-left border-r border-amber-400">12. Intizom</th>
-                <th className="p-1.5 text-left border-r border-amber-400">13. Qo'shimcha</th>
+                <th
+                  className="p-1.5 text-left border-r border-amber-400"
+                  title="Sifat barqarorligi: 1-2★ yomon, 3★ o'rtacha, 4-5★ yaxshi"
+                >
+                  <div className="flex items-center justify-between gap-0.5">
+                    <span>9. Sifat</span>
+                    <span className="text-[8px] font-black bg-yellow-200 text-stone-900 px-1 border border-amber-500 rounded-none whitespace-nowrap">
+                      1-5★
+                    </span>
+                  </div>
+                </th>
+                <th
+                  className="p-1.5 text-left border-r border-amber-400"
+                  title="Shaffoflik darajasi: 1-3★ shubhali, 4-5★ shaffof"
+                >
+                  <div className="flex items-center justify-between gap-0.5">
+                    <span>10. Shaffof</span>
+                    <span className="text-[8px] font-black bg-yellow-200 text-stone-900 px-1 border border-amber-500 rounded-none whitespace-nowrap">
+                      1-5★
+                    </span>
+                  </div>
+                </th>
+                <th
+                  className="p-1.5 text-left border-r border-amber-400"
+                  title="Javobgarlik: 1-2★ javob bermaydi, 3★ ba'zida javob beradi, 4-5★ javob beradi"
+                >
+                  <div className="flex items-center justify-between gap-0.5">
+                    <span>11. Javobgar</span>
+                    <span className="text-[8px] font-black bg-yellow-200 text-stone-900 px-1 border border-amber-500 rounded-none whitespace-nowrap">
+                      1-5★
+                    </span>
+                  </div>
+                </th>
+                <th
+                  className="p-1.5 text-left border-r border-amber-400"
+                  title="Intizom darajasi: 1-2★ kechikadi, 3★ o'rtacha, 4-5★ vaqtida"
+                >
+                  <div className="flex items-center justify-between gap-0.5">
+                    <span>12. Intizom</span>
+                    <span className="text-[8px] font-black bg-yellow-200 text-stone-900 px-1 border border-amber-500 rounded-none whitespace-nowrap">
+                      1-5★
+                    </span>
+                  </div>
+                </th>
+                <th
+                  className="p-1.5 text-left border-r border-amber-400"
+                  title="Yetkazib berish sharti (baho berilmaydi)"
+                >
+                  <span>13. Yetkazish</span>
+                </th>
                 
                 {/* 14. Taklif qilinadigan mahsulotlar ro'yxati */}
                 <th className="p-1.5 text-left border-r border-amber-400 font-heading">
@@ -1135,17 +1786,23 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                   </button>
                 </td>
 
-                {/* 3. Faoliyat turi filtri */}
+                {/* 3. Faoliyat turi filtri (Tick orqali bir nechtasini tanlash) */}
                 <td className="p-1 border-r border-amber-300">
-                  <select
-                    value={filterActivity}
-                    onChange={(e) => setFilterActivity(e.target.value)}
-                    className="w-full p-0.5 bg-white border border-amber-300 text-[10px] font-bold rounded-none focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="all">Barchasi</option>
-                    <option value="jismoniy">jismoniy</option>
-                    <option value="yuridik">yuridik</option>
-                  </select>
+                  {renderMultiFilterDropdown(
+                    'activity_type',
+                    '3. Faoliyat',
+                    filterActivityList,
+                    [
+                      { value: 'jismoniy', label: 'jismoniy' },
+                      { value: 'yuridik', label: 'yuridik' },
+                    ],
+                    (val) =>
+                      setFilterActivityList((prev) =>
+                        prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val]
+                      ),
+                    () => setFilterActivityList(['jismoniy', 'yuridik']),
+                    () => setFilterActivityList([])
+                  )}
                 </td>
 
                 {/* 4. Nom filtri (Sticky pinned) */}
@@ -1203,99 +1860,155 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                   />
                 </td>
 
-                {/* 7. Pul o'tkazmalari filtri */}
+                {/* 7. Pul o'tkazmalari filtri (Tick orqali bir nechtasini tanlash) */}
                 <td className="p-1 border-r border-amber-300">
-                  <select
-                    value={filterPaymentMethod}
-                    onChange={(e) => setFilterPaymentMethod(e.target.value)}
-                    className="w-full p-0.5 bg-white border border-amber-300 text-[10px] font-bold rounded-none focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="all">Barchasi</option>
-                    <option value="naqd">naqd</option>
-                    <option value="bank orqali">bank</option>
-                    <option value="bank kartalari orqali">karta</option>
-                  </select>
+                  {renderMultiFilterDropdown(
+                    'payment_method',
+                    "7. O'tkazma",
+                    filterPaymentMethodsList,
+                    [
+                      { value: 'naqd', label: 'naqd' },
+                      { value: 'bank orqali', label: 'bank orqali' },
+                      { value: 'bank kartalari orqali', label: 'bank kartalari' },
+                    ],
+                    (val) =>
+                      setFilterPaymentMethodsList((prev) =>
+                        prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val]
+                      ),
+                    () =>
+                      setFilterPaymentMethodsList(['naqd', 'bank orqali', 'bank kartalari orqali']),
+                    () => setFilterPaymentMethodsList([])
+                  )}
                 </td>
 
-                {/* 8. To'lov sharti filtri */}
+                {/* 8. To'lov sharti filtri (Tick orqali bir nechtasini tanlash) */}
                 <td className="p-1 border-r border-amber-300">
-                  <select
-                    value={filterPaymentCondition}
-                    onChange={(e) => setFilterPaymentCondition(e.target.value)}
-                    className="w-full p-0.5 bg-white border border-amber-300 text-[10px] font-bold rounded-none focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="all">Barchasi</option>
-                    <option value="naqd joyida">joyida</option>
-                    <option value="kechiktirib to'lash">kechiktirib</option>
-                  </select>
+                  {renderMultiFilterDropdown(
+                    'payment_condition',
+                    "8. To'lov sharti",
+                    filterPaymentConditionsList,
+                    [
+                      { value: 'naqd joyida', label: 'naqd joyida' },
+                      { value: "kechiktirib to'lash", label: "kechiktirib to'lash" },
+                      { value: "oldindan to'lov (avans)", label: "oldindan to'lov" },
+                      { value: "bo'lib-bo'lib to'lash", label: "bo'lib-bo'lib" },
+                    ],
+                    (val) =>
+                      setFilterPaymentConditionsList((prev) =>
+                        prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val]
+                      ),
+                    () =>
+                      setFilterPaymentConditionsList([
+                        'naqd joyida',
+                        "kechiktirib to'lash",
+                        "oldindan to'lov (avans)",
+                        "bo'lib-bo'lib to'lash",
+                      ]),
+                    () => setFilterPaymentConditionsList([])
+                  )}
                 </td>
 
-                {/* 9. Sifat barqarorligi filtri */}
+                {/* 9. Sifat barqarorligi filtri (Tick orqali bir nechtasini tanlash) */}
                 <td className="p-1 border-r border-amber-300">
-                  <select
-                    value={filterQuality}
-                    onChange={(e) => setFilterQuality(e.target.value)}
-                    className="w-full p-0.5 bg-white border border-amber-300 text-[10px] font-bold rounded-none focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="all">Barchasi</option>
-                    <option value="yaxshi">yaxshi</option>
-                    <option value="o'rtacha">o'rtacha</option>
-                    <option value="yomon">yomon</option>
-                  </select>
+                  {renderMultiFilterDropdown(
+                    'quality',
+                    '9. Sifat',
+                    filterQualityList,
+                    [
+                      { value: 'yaxshi', label: 'yaxshi (4-5★)' },
+                      { value: "o'rtacha", label: "o'rtacha (3★)" },
+                      { value: 'yomon', label: 'yomon (1-2★)' },
+                    ],
+                    (val) =>
+                      setFilterQualityList((prev) =>
+                        prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val]
+                      ),
+                    () => setFilterQualityList(['yaxshi', "o'rtacha", 'yomon']),
+                    () => setFilterQualityList([])
+                  )}
                 </td>
 
-                {/* 10. Shaffoflik darajasi filtri */}
+                {/* 10. Shaffoflik darajasi filtri (Tick orqali bir nechtasini tanlash) */}
                 <td className="p-1 border-r border-amber-300">
-                  <select
-                    value={filterTransparency}
-                    onChange={(e) => setFilterTransparency(e.target.value)}
-                    className="w-full p-0.5 bg-white border border-amber-300 text-[10px] font-bold rounded-none focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="all">Barchasi</option>
-                    <option value="shaffof">shaffof</option>
-                    <option value="shubhali">shubhali</option>
-                  </select>
+                  {renderMultiFilterDropdown(
+                    'transparency',
+                    '10. Shaffoflik',
+                    filterTransparencyList,
+                    [
+                      { value: 'shaffof', label: 'shaffof (4-5★)' },
+                      { value: 'shubhali', label: 'shubhali (1-3★)' },
+                    ],
+                    (val) =>
+                      setFilterTransparencyList((prev) =>
+                        prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val]
+                      ),
+                    () => setFilterTransparencyList(['shaffof', 'shubhali']),
+                    () => setFilterTransparencyList([])
+                  )}
                 </td>
 
-                {/* 11. Javobgarlik filtri */}
+                {/* 11. Javobgarlik filtri (Tick orqali bir nechtasini tanlash) */}
                 <td className="p-1 border-r border-amber-300">
-                  <select
-                    value={filterResponsibility}
-                    onChange={(e) => setFilterResponsibility(e.target.value)}
-                    className="w-full p-0.5 bg-white border border-amber-300 text-[10px] font-bold rounded-none focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="all">Barchasi</option>
-                    <option value="javob beradi">javob beradi</option>
-                    <option value="ba'zida">ba'zida</option>
-                    <option value="javob bermaydi">bermaydi</option>
-                  </select>
+                  {renderMultiFilterDropdown(
+                    'responsibility',
+                    '11. Javobgarlik',
+                    filterResponsibilityList,
+                    [
+                      { value: 'mahsulot sifatiga javob beradi', label: 'javob beradi (4-5★)' },
+                      { value: "mahsulot sifatiga ba'zida javob beradi", label: "ba'zida javob beradi (3★)" },
+                      { value: 'mahsulot sifatiga javob bermaydi', label: 'javob bermaydi (1-2★)' },
+                    ],
+                    (val) =>
+                      setFilterResponsibilityList((prev) =>
+                        prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val]
+                      ),
+                    () =>
+                      setFilterResponsibilityList([
+                        'mahsulot sifatiga javob beradi',
+                        "mahsulot sifatiga ba'zida javob beradi",
+                        'mahsulot sifatiga javob bermaydi',
+                      ]),
+                    () => setFilterResponsibilityList([])
+                  )}
                 </td>
 
-                {/* 12. Intizom darajasi filtri */}
+                {/* 12. Intizom darajasi filtri (Tick orqali bir nechtasini tanlash) */}
                 <td className="p-1 border-r border-amber-300">
-                  <select
-                    value={filterDiscipline}
-                    onChange={(e) => setFilterDiscipline(e.target.value)}
-                    className="w-full p-0.5 bg-white border border-amber-300 text-[10px] font-bold rounded-none focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="all">Barchasi</option>
-                    <option value="vaqtida">vaqtida</option>
-                    <option value="o'rtacha">o'rtacha</option>
-                    <option value="kechikadi">kechikadi</option>
-                  </select>
+                  {renderMultiFilterDropdown(
+                    'discipline',
+                    '12. Intizom',
+                    filterDisciplineList,
+                    [
+                      { value: 'vaqtida', label: 'vaqtida (4-5★)' },
+                      { value: "o'rtacha", label: "o'rtacha (3★)" },
+                      { value: 'kechikadi', label: 'kechikadi (1-2★)' },
+                    ],
+                    (val) =>
+                      setFilterDisciplineList((prev) =>
+                        prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val]
+                      ),
+                    () => setFilterDisciplineList(['vaqtida', "o'rtacha", 'kechikadi']),
+                    () => setFilterDisciplineList([])
+                  )}
                 </td>
 
-                {/* 13. Qo'shimchalar filtri */}
+                {/* 13. Qo'shimchalar filtri (Tick orqali bir nechtasini tanlash) */}
                 <td className="p-1 border-r border-amber-300">
-                  <select
-                    value={filterExtras}
-                    onChange={(e) => setFilterExtras(e.target.value)}
-                    className="w-full p-0.5 bg-white border border-amber-300 text-[10px] font-bold rounded-none focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="all">Barchasi</option>
-                    <option value="pulli">pulli</option>
-                    <option value="bepul">bepul</option>
-                  </select>
+                  {renderMultiFilterDropdown(
+                    'extras',
+                    "13. Qo'shimcha",
+                    filterExtrasList,
+                    [
+                      { value: 'bepul', label: 'bepul yetkazish' },
+                      { value: 'pulli', label: 'pulli yetkazish' },
+                    ],
+                    (val) =>
+                      setFilterExtrasList((prev) =>
+                        prev.includes(val) ? prev.filter((x) => x !== val) : [...prev, val]
+                      ),
+                    () => setFilterExtrasList(['bepul', 'pulli']),
+                    () => setFilterExtrasList([])
+                  )}
                 </td>
 
                 {/* 14. Taklif qilinadigan mahsulotlar filtri (IXCHAM CHECKBOX VA POPOVER) */}
@@ -1517,50 +2230,132 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                       </td>
 
                       {/* 7. Pul o'tkazmalari */}
-                      <td className="p-1.5 border-r border-amber-300 whitespace-nowrap">
-                        <span className="px-1 py-0.5 text-[10px] font-black bg-yellow-200 border border-amber-400 rounded-none inline-block">
-                          {item.paymentMethod}
-                        </span>
+                      <td className="p-1.5 border-r border-amber-300">
+                        <div className="flex flex-wrap gap-0.5">
+                          {(item.paymentMethods && item.paymentMethods.length > 0
+                            ? item.paymentMethods
+                            : [item.paymentMethod]
+                          ).map((pm, pmIdx) => (
+                            <span
+                              key={pmIdx}
+                              className="px-1 py-0.5 text-[9px] font-black bg-yellow-200 border border-amber-400 rounded-none inline-block whitespace-nowrap"
+                            >
+                              {pm}
+                            </span>
+                          ))}
+                        </div>
                       </td>
 
                       {/* 8. To'lov sharti */}
                       <td className="p-1.5 border-r border-amber-300 text-[10px]">
-                        {isDelay ? (
-                          <span className="px-1 py-0.5 font-black bg-amber-200 border border-amber-500 rounded-none inline-block leading-tight">
-                            kechiktirib ({item.delayDays || 0}k)
-                          </span>
-                        ) : (
-                          <span className="px-1 py-0.5 font-black bg-yellow-200 border border-amber-400 rounded-none inline-block">
-                            naqd joyida
-                          </span>
-                        )}
+                        <div className="flex flex-wrap gap-0.5">
+                          {item.paymentConditions && item.paymentConditions.length > 0 ? (
+                            item.paymentConditions.map((pc, pcIdx) => (
+                              <span
+                                key={pcIdx}
+                                className={`px-1 py-0.5 font-black border text-[9px] rounded-none inline-block leading-tight whitespace-nowrap ${
+                                  pc.includes('kechiktirib')
+                                    ? 'bg-amber-200 border-amber-500'
+                                    : 'bg-yellow-200 border-amber-400'
+                                }`}
+                              >
+                                {pc}
+                                {pc.includes('kechiktirib') && item.delayDays ? ` (${item.delayDays}k)` : ''}
+                              </span>
+                            ))
+                          ) : isDelay ? (
+                            <span className="px-1 py-0.5 font-black bg-amber-200 border border-amber-500 rounded-none inline-block leading-tight">
+                              kechiktirib ({item.delayDays || 0}k)
+                            </span>
+                          ) : (
+                            <span className="px-1 py-0.5 font-black bg-yellow-200 border border-amber-400 rounded-none inline-block">
+                              naqd joyida
+                            </span>
+                          )}
+                        </div>
                       </td>
 
                       {/* 9. Sifat barqarorligi */}
                       <td className="p-1.5 border-r border-amber-300">
-                        {renderQualityBadge(item.qualityStability)}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {renderQualityBadge(item.qualityStability)}
+                          {item.qualityScore && (() => {
+                            const info = getQualityScoreInfo(item.qualityScore);
+                            return (
+                              <span
+                                className={`text-[9px] font-black px-1 py-0.5 border rounded-none flex items-center gap-0.5 ${info.color}`}
+                                title={`Sifat: ${item.qualityScore}★ (${info.text}) — ${info.explanation}`}
+                              >
+                                <span>{item.qualityScore}★</span>
+                                <span className="text-[8px] uppercase">({info.text})</span>
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </td>
 
                       {/* 10. Shaffoflik darajasi */}
                       <td className="p-1.5 border-r border-amber-300">
-                        {renderTransparencyBadge(item.transparencyLevel)}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {renderTransparencyBadge(item.transparencyLevel)}
+                          {item.transparencyScore && (() => {
+                            const info = getTransparencyScoreInfo(item.transparencyScore);
+                            return (
+                              <span
+                                className={`text-[9px] font-black px-1 py-0.5 border rounded-none flex items-center gap-0.5 ${info.color}`}
+                                title={`Shaffoflik: ${item.transparencyScore}★ (${info.text}) — ${info.explanation}`}
+                              >
+                                <span>{item.transparencyScore}★</span>
+                                <span className="text-[8px] uppercase">({info.text})</span>
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </td>
 
                       {/* 11. Javobgarlik */}
                       <td className="p-1.5 text-black border-r border-amber-300 break-words text-[10px] leading-tight font-medium">
-                        <span className="line-clamp-2" title={item.responsibility}>
-                          {item.responsibility}
-                        </span>
+                        <div className="space-y-0.5">
+                          <span className="line-clamp-2" title={item.responsibility}>
+                            {item.responsibility}
+                          </span>
+                          {item.responsibilityScore && (() => {
+                            const info = getResponsibilityScoreInfo(item.responsibilityScore);
+                            return (
+                              <span
+                                className={`inline-flex items-center gap-0.5 text-[9px] font-black px-1 py-0.5 border rounded-none ${info.color}`}
+                                title={`Javobgarlik: ${item.responsibilityScore}★ (${info.text}) — ${info.explanation}`}
+                              >
+                                <span>{item.responsibilityScore}★</span>
+                                <span className="text-[8px] uppercase">({info.text})</span>
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </td>
 
                       {/* 12. Intizom darajasi */}
                       <td className="p-1.5 border-r border-amber-300">
-                        {renderDisciplineBadge(item.disciplineLevel)}
+                        <div className="flex items-center gap-1 flex-wrap">
+                          {renderDisciplineBadge(item.disciplineLevel)}
+                          {item.disciplineScore && (() => {
+                            const info = getDisciplineScoreInfo(item.disciplineScore);
+                            return (
+                              <span
+                                className={`text-[9px] font-black px-1 py-0.5 border rounded-none flex items-center gap-0.5 ${info.color}`}
+                                title={`Intizom: ${item.disciplineScore}★ (${info.text}) — ${info.explanation}`}
+                              >
+                                <span>{item.disciplineScore}★</span>
+                                <span className="text-[8px] uppercase">({info.text})</span>
+                              </span>
+                            );
+                          })()}
+                        </div>
                       </td>
 
-                      {/* 13. Qo'shimchalar */}
+                      {/* 13. Qo'shimchalar (Yetkazib berishda baho bo'lmasin) */}
                       <td className="p-1.5 border-r border-amber-300">
-                        <span className="inline-flex items-center gap-0.5 px-1 py-0.5 text-[9px] font-black bg-yellow-200 border border-amber-400 rounded-none whitespace-nowrap">
+                        <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 text-[9px] font-black bg-yellow-200 border border-amber-400 rounded-none whitespace-nowrap">
                           <Truck className="w-2.5 h-2.5 text-stone-800 shrink-0" />
                           {item.extras.replace('yetkazib berish ', '')}
                         </span>
@@ -1663,15 +2458,45 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                               </div>
                               <div>
                                 <span className="text-stone-500 block text-[9px] font-black uppercase">Sifat:</span>
-                                <div>{renderQualityBadge(item.qualityStability)}</div>
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  {renderQualityBadge(item.qualityStability)}
+                                  {item.qualityScore && (() => {
+                                    const info = getQualityScoreInfo(item.qualityScore);
+                                    return (
+                                      <span className={`text-[9px] font-black px-1 py-0.5 border rounded-none ${info.color}`}>
+                                        {item.qualityScore}★ ({info.text})
+                                      </span>
+                                    );
+                                  })()}
+                                </div>
                               </div>
                               <div>
                                 <span className="text-stone-500 block text-[9px] font-black uppercase">Shaffoflik:</span>
-                                <div>{renderTransparencyBadge(item.transparencyLevel)}</div>
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  {renderTransparencyBadge(item.transparencyLevel)}
+                                  {item.transparencyScore && (() => {
+                                    const info = getTransparencyScoreInfo(item.transparencyScore);
+                                    return (
+                                      <span className={`text-[9px] font-black px-1 py-0.5 border rounded-none ${info.color}`}>
+                                        {item.transparencyScore}★ ({info.text})
+                                      </span>
+                                    );
+                                  })()}
+                                </div>
                               </div>
                               <div>
                                 <span className="text-stone-500 block text-[9px] font-black uppercase">Intizom:</span>
-                                <div>{renderDisciplineBadge(item.disciplineLevel)}</div>
+                                <div className="flex items-center gap-1 mt-0.5">
+                                  {renderDisciplineBadge(item.disciplineLevel)}
+                                  {item.disciplineScore && (() => {
+                                    const info = getDisciplineScoreInfo(item.disciplineScore);
+                                    return (
+                                      <span className={`text-[9px] font-black px-1 py-0.5 border rounded-none ${info.color}`}>
+                                        {item.disciplineScore}★ ({info.text})
+                                      </span>
+                                    );
+                                  })()}
+                                </div>
                               </div>
                               <div>
                                 <span className="text-stone-500 block text-[9px] font-black uppercase">Qo'shimcha:</span>
@@ -1686,7 +2511,17 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
 
                             <div>
                               <span className="text-stone-500 block text-[9px] font-black uppercase">Javobgarlik:</span>
-                              <span className="font-semibold text-black">{item.responsibility}</span>
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="font-semibold text-black">{item.responsibility}</span>
+                                {item.responsibilityScore && (() => {
+                                  const info = getResponsibilityScoreInfo(item.responsibilityScore);
+                                  return (
+                                    <span className={`text-[9px] font-black px-1.5 py-0.5 border rounded-none ${info.color}`}>
+                                      {item.responsibilityScore}★ ({info.text})
+                                    </span>
+                                  );
+                                })()}
+                              </div>
                             </div>
 
                             <div>
@@ -1828,25 +2663,67 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                   {/* 9. Sifat */}
                   <div>
                     <span className="text-[9px] font-bold text-stone-600 block">9. Sifat:</span>
-                    {renderQualityBadge(item.qualityStability)}
+                    <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                      {renderQualityBadge(item.qualityStability)}
+                      {item.qualityScore && (() => {
+                        const info = getQualityScoreInfo(item.qualityScore);
+                        return (
+                          <span
+                            className={`text-[9px] font-black px-1 py-0.5 border rounded-none flex items-center gap-0.5 ${info.color}`}
+                            title={`Sifat: ${item.qualityScore}★ — ${info.explanation}`}
+                          >
+                            <span>{item.qualityScore}★</span>
+                            <span className="text-[8px] uppercase">({info.text})</span>
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </div>
 
                   {/* 10. Shaffoflik */}
                   <div>
                     <span className="text-[9px] font-bold text-stone-600 block">10. Shaffoflik:</span>
-                    {renderTransparencyBadge(item.transparencyLevel)}
+                    <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                      {renderTransparencyBadge(item.transparencyLevel)}
+                      {item.transparencyScore && (() => {
+                        const info = getTransparencyScoreInfo(item.transparencyScore);
+                        return (
+                          <span
+                            className={`text-[9px] font-black px-1 py-0.5 border rounded-none flex items-center gap-0.5 ${info.color}`}
+                            title={`Shaffoflik: ${item.transparencyScore}★ — ${info.explanation}`}
+                          >
+                            <span>{item.transparencyScore}★</span>
+                            <span className="text-[8px] uppercase">({info.text})</span>
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </div>
 
                   {/* 12. Intizom */}
                   <div>
                     <span className="text-[9px] font-bold text-stone-600 block">12. Intizom:</span>
-                    {renderDisciplineBadge(item.disciplineLevel)}
+                    <div className="flex items-center gap-1 flex-wrap mt-0.5">
+                      {renderDisciplineBadge(item.disciplineLevel)}
+                      {item.disciplineScore && (() => {
+                        const info = getDisciplineScoreInfo(item.disciplineScore);
+                        return (
+                          <span
+                            className={`text-[9px] font-black px-1 py-0.5 border rounded-none flex items-center gap-0.5 ${info.color}`}
+                            title={`Intizom: ${item.disciplineScore}★ — ${info.explanation}`}
+                          >
+                            <span>{item.disciplineScore}★</span>
+                            <span className="text-[8px] uppercase">({info.text})</span>
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </div>
 
-                  {/* 13. Qo'shimcha */}
+                  {/* 13. Qo'shimcha (Yetkazib berishda baho bo'lmasin) */}
                   <div>
                     <span className="text-[9px] font-bold text-stone-600 block">13. Qo'shimcha:</span>
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-black bg-yellow-200 border border-amber-400">
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-black bg-yellow-200 border border-amber-400 mt-0.5">
                       <Truck className="w-3 h-3 text-stone-800" />
                       {item.extras.replace('yetkazib berish ', '')}
                     </span>
@@ -1855,9 +2732,23 @@ export const SupplierTable: React.FC<SupplierTableProps> = ({
                   {/* 11. Javobgarlik */}
                   <div className="col-span-2">
                     <span className="text-[9px] font-bold text-stone-600 block">11. Javobgarlik:</span>
-                    <span className="font-semibold text-black text-xs block bg-yellow-200/50 p-1 border border-amber-300">
-                      {item.responsibility}
-                    </span>
+                    <div className="flex items-center justify-between gap-2 bg-yellow-200/50 p-1.5 border border-amber-300 mt-0.5">
+                      <span className="font-semibold text-black text-xs">
+                        {item.responsibility}
+                      </span>
+                      {item.responsibilityScore && (() => {
+                        const info = getResponsibilityScoreInfo(item.responsibilityScore);
+                        return (
+                          <span
+                            className={`shrink-0 inline-flex items-center gap-0.5 text-[9px] font-black px-1.5 py-0.5 border rounded-none ${info.color}`}
+                            title={`Javobgarlik: ${item.responsibilityScore}★ — ${info.explanation}`}
+                          >
+                            <span>{item.responsibilityScore}★</span>
+                            <span className="text-[8px] uppercase">({info.text})</span>
+                          </span>
+                        );
+                      })()}
+                    </div>
                   </div>
 
                   {/* 14. Taklif qilinadigan mahsulotlar ro'yxati */}

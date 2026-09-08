@@ -1,5 +1,20 @@
-import React, { useState, useEffect } from 'react';
-import { X, Save, AlertCircle, Wrench, Calendar, Building2, Tag, DollarSign, Info, FileText } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import {
+  X,
+  Save,
+  AlertCircle,
+  Wrench,
+  Calendar,
+  Building2,
+  Tag,
+  DollarSign,
+  Info,
+  FileText,
+  History,
+  CheckCircle2,
+  Sparkles,
+  Search,
+} from 'lucide-react';
 import { AutoPart, AutoPartFormData, Supplier } from '../types';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 
@@ -10,6 +25,7 @@ interface AddAutoPartModalProps {
   currentCount: number;
   initialPart?: AutoPart | null;
   suppliers: Supplier[];
+  existingParts?: AutoPart[];
 }
 
 export const AddAutoPartModal: React.FC<AddAutoPartModalProps> = ({
@@ -19,6 +35,7 @@ export const AddAutoPartModal: React.FC<AddAutoPartModalProps> = ({
   currentCount,
   initialPart,
   suppliers,
+  existingParts = [],
 }) => {
   const isOnline = useOnlineStatus();
   const isEditMode = Boolean(initialPart);
@@ -40,11 +57,34 @@ export const AddAutoPartModal: React.FC<AddAutoPartModalProps> = ({
     comment: '',
   });
 
+  const [selectedTemplatePartId, setSelectedTemplatePartId] = useState<string>('');
+  const [templateSearch, setTemplateSearch] = useState<string>('');
+  const [autoFilledNotice, setAutoFilledNotice] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Noyob yoki tartiblangan oldingi qismlar ro'yxati
+  const sortedExistingParts = useMemo(() => {
+    return [...existingParts].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
+  }, [existingParts]);
+
+  // Qidiruv bo'yicha filtrlangan eski qismlar
+  const filteredExistingParts = useMemo(() => {
+    if (!templateSearch.trim()) return sortedExistingParts;
+    const query = templateSearch.toLowerCase().trim();
+    return sortedExistingParts.filter(
+      (p) =>
+        p.partName.toLowerCase().includes(query) ||
+        p.brand.toLowerCase().includes(query) ||
+        p.supplierName.toLowerCase().includes(query)
+    );
+  }, [sortedExistingParts, templateSearch]);
+
   useEffect(() => {
     if (isOpen) {
+      setSelectedTemplatePartId('');
+      setTemplateSearch('');
+      setAutoFilledNotice(null);
       if (initialPart) {
         setFormData({
           partName: initialPart.partName,
@@ -70,6 +110,29 @@ export const AddAutoPartModal: React.FC<AddAutoPartModalProps> = ({
       setIsSubmitting(false);
     }
   }, [isOpen, initialPart, suppliers]);
+
+  // Eski ehtiyot qism tanlanganda avtomatik to'ldirish
+  const handleSelectExistingPart = (partId: string) => {
+    setSelectedTemplatePartId(partId);
+    if (!partId) return;
+
+    const chosen = existingParts.find((p) => p.id === partId);
+    if (chosen) {
+      setFormData({
+        partName: chosen.partName,
+        brand: chosen.brand,
+        supplierName: chosen.supplierName,
+        price: String(chosen.price),
+        date: getTodayDate(), // yangi yozuv uchun joriy sana qo'yiladi
+        source: chosen.source,
+        comment: chosen.comment,
+      });
+      setAutoFilledNotice(
+        `«${chosen.partName} (${chosen.brand})» ma'lumotlari avtomatik to'ldirildi. Qo'shishdan oldin narx yoki boshqa maydonlarni tahrirlashingiz mumkin!`
+      );
+      setErrors({});
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -171,6 +234,77 @@ export const AddAutoPartModal: React.FC<AddAutoPartModalProps> = ({
         {/* Form Body */}
         <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-3.5 max-h-[80vh] overflow-y-auto">
           
+          {/* Eski qo'shilgan ehtiyot qismlardan tezkor tanlash (Avtomatik to'ldirish va tahrirlash imkoniyati) */}
+          {existingParts && existingParts.length > 0 && !isEditMode && (
+            <div className="p-3 bg-amber-100/90 border-2 border-amber-400 space-y-2">
+              <div className="flex items-center justify-between gap-2">
+                <label
+                  htmlFor="quick-select-part"
+                  className="text-xs font-black uppercase text-amber-950 flex items-center gap-1.5"
+                >
+                  <History className="w-4 h-4 text-amber-800" />
+                  <span>Eski (oldin kiritilgan) ehtiyot qismdan tanlash:</span>
+                </label>
+                <span className="text-[10px] bg-amber-300 px-1.5 py-0.5 border border-amber-500 font-black text-black">
+                  {existingParts.length} ta mavjud
+                </span>
+              </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={templateSearch}
+                    onChange={(e) => setTemplateSearch(e.target.value)}
+                    placeholder="Qism nomi, brendi yoki yetkazib beruvchini qidiring..."
+                    className="w-full pl-8 pr-2.5 py-1.5 text-xs border-2 border-amber-400 bg-white text-black font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500 rounded-none placeholder:text-stone-400"
+                  />
+                  {templateSearch && (
+                    <button
+                      type="button"
+                      onClick={() => setTemplateSearch('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-stone-400 hover:text-black text-xs font-bold px-1"
+                      title="Qidiruvni tozalash"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+                {templateSearch && (
+                  <span className="text-[10px] text-amber-900 font-bold self-center shrink-0">
+                    {filteredExistingParts.length} ta topildi
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <select
+                  id="quick-select-part"
+                  value={selectedTemplatePartId}
+                  onChange={(e) => handleSelectExistingPart(e.target.value)}
+                  className="w-full px-3 py-2 text-xs border-2 border-amber-500 bg-white text-black font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 rounded-none cursor-pointer"
+                >
+                  <option value="">
+                    {templateSearch
+                      ? `-- Topilgan qismlardan birini tanlang (${filteredExistingParts.length} ta) --`
+                      : `-- Oldingi ehtiyot qismlardan birini tanlang (avto to'ldirish) --`}
+                  </option>
+                  {filteredExistingParts.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.partName} | {p.brand} | {p.supplierName} | {p.price.toLocaleString('uz-UZ')} so'm
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {autoFilledNotice && (
+                <div className="flex items-start gap-1.5 p-2 bg-emerald-100 border border-emerald-400 text-emerald-900 text-[11px] font-bold">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-700 shrink-0 mt-0.5" />
+                  <span>{autoFilledNotice}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* 1 & 2: Avtomatik to'ldiriladigan ustunlar */}
           <div className="grid grid-cols-2 gap-3 p-2.5 bg-yellow-100 border border-amber-300">
             <div>
