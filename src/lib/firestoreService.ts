@@ -18,6 +18,21 @@ const SUPPLIERS_CACHE_KEY = 'daewoo_suppliers_cache';
 const AUTOPARTS_CACHE_KEY = 'daewoo_autoparts_cache';
 
 // Load cached data
+export function cleanForFirestore<T extends Record<string, any>>(obj: T): Record<string, any> {
+  const result: Record<string, any> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value === undefined) {
+      continue;
+    }
+    if (value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+      result[key] = cleanForFirestore(value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
+
 export function getCachedSuppliers(): Supplier[] {
   try {
     const raw = localStorage.getItem(SUPPLIERS_CACHE_KEY);
@@ -199,7 +214,7 @@ export function subscribeSuppliers(
         // Seed initial data to firestore if empty
         localStorage.setItem('daewoo_suppliers_seeded', 'true');
         INITIAL_SAMPLE_SUPPLIERS.forEach((item) => {
-          setDoc(doc(db, SUPPLIERS_COLLECTION, item.id), item).catch((err) => {
+          setDoc(doc(db, SUPPLIERS_COLLECTION, item.id), cleanForFirestore(item)).catch((err) => {
             console.warn('Seeding supplier error:', err);
           });
         });
@@ -245,7 +260,7 @@ export function subscribeAutoParts(
       if (snapshot.empty && !localStorage.getItem('daewoo_autoparts_seeded')) {
         localStorage.setItem('daewoo_autoparts_seeded', 'true');
         INITIAL_SAMPLE_AUTOPARTS.forEach((item) => {
-          setDoc(doc(db, AUTOPARTS_COLLECTION, item.id), item).catch((err) => {
+          setDoc(doc(db, AUTOPARTS_COLLECTION, item.id), cleanForFirestore(item)).catch((err) => {
             console.warn('Seeding autopart error:', err);
           });
         });
@@ -295,18 +310,38 @@ export async function saveSupplierToDb(
     second: '2-digit',
   });
 
+  const isDelayPayment =
+    data.paymentCondition === 'kechiktirib to\'lash' ||
+    Boolean(data.paymentConditions?.some((c) => c.includes('kechiktirib')));
+
+  const rawDelayDays = isDelayPayment && data.delayDays ? String(data.delayDays).trim() : null;
+
+  const acts = (data.activityTypes && data.activityTypes.length > 0)
+    ? data.activityTypes
+    : typeof data.activityType === 'string'
+      ? data.activityType.split(',').map((s) => s.trim()).filter(Boolean)
+      : [data.activityType || 'jismoniy'];
+
+  const pMethods = data.paymentMethods && data.paymentMethods.length > 0
+    ? data.paymentMethods
+    : [String(data.paymentMethod || 'naqd pul')];
+
+  const pConditions = data.paymentConditions && data.paymentConditions.length > 0
+    ? data.paymentConditions
+    : [String(data.paymentCondition || 'naqd joyida')];
+
   if (existingSupplier) {
     const updated: Supplier = {
       ...existingSupplier,
       activityType: data.activityType,
+      activityTypes: acts as any,
       name: data.name.trim(),
       address: data.address.trim(),
       phone: data.phone.trim(),
       paymentMethod: data.paymentMethod,
-      paymentMethods: data.paymentMethods && data.paymentMethods.length > 0 ? data.paymentMethods : [String(data.paymentMethod)],
+      paymentMethods: pMethods,
       paymentCondition: data.paymentCondition,
-      paymentConditions: data.paymentConditions && data.paymentConditions.length > 0 ? data.paymentConditions : [String(data.paymentCondition)],
-      delayDays: (data.paymentCondition === 'kechiktirib to\'lash' || data.paymentConditions?.includes('kechiktirib to\'lash')) ? data.delayDays : undefined,
+      paymentConditions: pConditions,
       qualityStability: data.qualityStability,
       qualityScore: data.qualityScore || 4,
       transparencyLevel: data.transparencyLevel,
@@ -317,9 +352,17 @@ export async function saveSupplierToDb(
       disciplineScore: data.disciplineScore || 4,
       extras: data.extras,
       extrasScore: data.extrasScore || 4,
-      products: data.products,
+      products: data.products || [],
     };
-    await setDoc(doc(db, SUPPLIERS_COLLECTION, existingSupplier.id), updated);
+
+    if (rawDelayDays) {
+      updated.delayDays = rawDelayDays;
+    } else {
+      delete updated.delayDays;
+    }
+
+    const payload = cleanForFirestore(updated);
+    await setDoc(doc(db, SUPPLIERS_COLLECTION, existingSupplier.id), payload);
   } else {
     const id = `sup_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const newSupplier: Supplier = {
@@ -328,14 +371,14 @@ export async function saveSupplierToDb(
       systemTime,
       createdAt: now.getTime(),
       activityType: data.activityType,
+      activityTypes: acts as any,
       name: data.name.trim(),
       address: data.address.trim(),
       phone: data.phone.trim(),
       paymentMethod: data.paymentMethod,
-      paymentMethods: data.paymentMethods && data.paymentMethods.length > 0 ? data.paymentMethods : [String(data.paymentMethod)],
+      paymentMethods: pMethods,
       paymentCondition: data.paymentCondition,
-      paymentConditions: data.paymentConditions && data.paymentConditions.length > 0 ? data.paymentConditions : [String(data.paymentCondition)],
-      delayDays: (data.paymentCondition === 'kechiktirib to\'lash' || data.paymentConditions?.includes('kechiktirib to\'lash')) ? data.delayDays : undefined,
+      paymentConditions: pConditions,
       qualityStability: data.qualityStability,
       qualityScore: data.qualityScore || 4,
       transparencyLevel: data.transparencyLevel,
@@ -346,9 +389,15 @@ export async function saveSupplierToDb(
       disciplineScore: data.disciplineScore || 4,
       extras: data.extras,
       extrasScore: data.extrasScore || 4,
-      products: data.products,
+      products: data.products || [],
     };
-    await setDoc(doc(db, SUPPLIERS_COLLECTION, id), newSupplier);
+
+    if (rawDelayDays) {
+      newSupplier.delayDays = rawDelayDays;
+    }
+
+    const payload = cleanForFirestore(newSupplier);
+    await setDoc(doc(db, SUPPLIERS_COLLECTION, id), payload);
   }
 }
 
@@ -393,9 +442,10 @@ export async function saveAutoPartToDb(
       price: numericPrice,
       date: data.date.trim(),
       source: data.source.trim(),
-      comment: data.comment.trim(),
+      comment: (data.comment || '').trim(),
     };
-    await setDoc(doc(db, AUTOPARTS_COLLECTION, existingPart.id), updated);
+    const payload = cleanForFirestore(updated);
+    await setDoc(doc(db, AUTOPARTS_COLLECTION, existingPart.id), payload);
   } else {
     const id = `part_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const newPart: AutoPart = {
@@ -409,9 +459,10 @@ export async function saveAutoPartToDb(
       price: numericPrice,
       date: data.date.trim(),
       source: data.source.trim(),
-      comment: data.comment.trim(),
+      comment: (data.comment || '').trim(),
     };
-    await setDoc(doc(db, AUTOPARTS_COLLECTION, id), newPart);
+    const payload = cleanForFirestore(newPart);
+    await setDoc(doc(db, AUTOPARTS_COLLECTION, id), payload);
   }
 }
 
