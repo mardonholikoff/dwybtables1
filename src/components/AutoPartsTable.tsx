@@ -22,7 +22,7 @@ import {
   FileEdit,
   FileUp,
 } from 'lucide-react';
-import { AutoPart } from '../types';
+import { AutoPart, Supplier } from '../types';
 import { exportAutoPartsToExcel } from '../utils/excelExport';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { formatUSD } from '../utils/formatCurrency';
@@ -38,6 +38,7 @@ import {
 
 interface AutoPartsTableProps {
   parts: AutoPart[];
+  suppliers?: Supplier[];
   onOpenAddModal: () => void;
   onEditPart: (part: AutoPart) => void;
   onDeletePart: (id: string) => void;
@@ -46,6 +47,7 @@ interface AutoPartsTableProps {
 
 export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
   parts,
+  suppliers = [],
   onOpenAddModal,
   onEditPart,
   onDeletePart,
@@ -308,7 +310,7 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
 
     try {
       setIsParsingExcel(true);
-      const res = await validateAndParseEditedExcel(file, parts);
+      const res = await validateAndParseEditedExcel(file, parts, suppliers);
       setUploadValidationResult(res);
       setIsUploadReviewOpen(true);
     } catch (err: any) {
@@ -331,7 +333,7 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
       await onBatchUpdateParts(changedParts);
       setIsUploadReviewOpen(false);
       setUploadValidationResult(null);
-      alert(`Muvaffaqiyatli saqlandi! ${changedParts.length} ta mahsulot ma'lumotlari yangilandi.`);
+      alert(`Muvaffaqiyatli saqlandi! ${changedParts.length} ta mahsulot ma'lumotlari bazaga saqlandi va yangilandi.`);
     } catch (err: any) {
       alert(`Saqlashda xatolik yuz berdi: ${err?.message || 'Noma\'lum xatolik'}`);
     } finally {
@@ -1310,6 +1312,7 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
         isOpen={isDownloadWarningOpen}
         onClose={() => setIsDownloadWarningOpen(false)}
         parts={parts}
+        suppliers={suppliers}
       />
 
       {/* 2. Tahrirlangan jadval yuklangandan keyingi Tekshiruv va Tasdiqlash Modali */}

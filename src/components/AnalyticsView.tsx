@@ -69,11 +69,12 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
   // 3-BOSQICH: Brend tanlash (Multi-select)
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
 
-  // 4-BOSQICH: Yangi qo'shimcha filtrlar: Kod, API, Litr, Davlat (Multi-select)
+  // 4-BOSQICH: Qo'shimcha filtrlar: Kod, API, Litr, Davlat, Yetkazib beruvchi (Multi-select)
   const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
   const [selectedApis, setSelectedApis] = useState<string[]>([]);
   const [selectedLiters, setSelectedLiters] = useState<string[]>([]);
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
+  const [selectedSuppliers, setSelectedSuppliers] = useState<string[]>([]);
 
   // Grafik sozlamalari: "natural" (egrisimon oval) default qilib qo'yildi
   const [curveType, setCurveType] = useState<'natural' | 'monotone' | 'linear'>('natural');
@@ -199,6 +200,24 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
       .sort((a, b) => a.country.localeCompare(b.country));
   }, [parts, selectedPartNames]);
 
+  // 7. Tanlangan moylarga mos unikal Yetkazib beruvchilar
+  const availableSuppliers = useMemo(() => {
+    const map = new Map<string, number>();
+    parts.forEach((p) => {
+      if (selectedPartNames.length > 0) {
+        const pName = (p.partName || '').trim().toLowerCase();
+        if (!selectedPartNames.some((n) => n.trim().toLowerCase() === pName)) return;
+      }
+      const supplier = p.supplierName?.trim();
+      if (supplier) {
+        map.set(supplier, (map.get(supplier) || 0) + 1);
+      }
+    });
+    return Array.from(map.entries())
+      .map(([supplier, count]) => ({ supplier, count }))
+      .sort((a, b) => a.supplier.localeCompare(b.supplier));
+  }, [parts, selectedPartNames]);
+
   // Sana bo'yicha tezkor filtrlar
   const handleQuickDateFilter = (type: 'all' | '30d' | '3m' | '6m' | 'year') => {
     const today = new Date();
@@ -231,15 +250,17 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
     setSelectedApis([]);
     setSelectedLiters([]);
     setSelectedCountries([]);
+    setSelectedSuppliers([]);
   };
 
   const isAdditionalFilterActive =
     selectedCodes.length > 0 ||
     selectedApis.length > 0 ||
     selectedLiters.length > 0 ||
-    selectedCountries.length > 0;
+    selectedCountries.length > 0 ||
+    selectedSuppliers.length > 0;
 
-  // 7. Tanlangan parametrlar bo'yicha filtrlangan yozuvlar
+  // 8. Tanlangan parametrlar bo'yicha filtrlangan yozuvlar
   const filteredData = useMemo(() => {
     return parts.filter((item) => {
       // 1. Qism nomi mosligi (Multi-select)
@@ -282,7 +303,15 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
         }
       }
 
-      // 6. Brend mosligi (Multi-select)
+      // 6. Yetkazib beruvchi mosligi (Multi-select)
+      if (selectedSuppliers.length > 0) {
+        const itemSupplier = (item.supplierName || '').trim().toLowerCase();
+        if (!selectedSuppliers.some((s) => s.trim().toLowerCase() === itemSupplier)) {
+          return false;
+        }
+      }
+
+      // 7. Brend mosligi (Multi-select)
       if (selectedBrands.length > 0) {
         const itemBrand = (item.brand || '').trim().toLowerCase();
         if (!selectedBrands.some((b) => b.trim().toLowerCase() === itemBrand)) {
@@ -290,7 +319,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
         }
       }
 
-      // 7. Sana oralig'i mosligi
+      // 8. Sana oralig'i mosligi
       const itemDate = item.date || '';
       if (startDate && itemDate < startDate) return false;
       if (endDate && itemDate > endDate) return false;
@@ -304,6 +333,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
     selectedApis,
     selectedLiters,
     selectedCountries,
+    selectedSuppliers,
     selectedBrands,
     startDate,
     endDate,
@@ -690,12 +720,17 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
           {/* 1-QADAM: SANA MUDDATI */}
           <div className="bg-yellow-50/70 border border-amber-300 p-2 sm:p-2.5 flex flex-col justify-between space-y-2">
             <div>
-              <div className="flex items-center gap-1 text-black font-black text-[11px] sm:text-xs uppercase mb-1">
-                <Calendar className="w-3.5 h-3.5 text-amber-700 stroke-[2.5]" />
-                <span>1-Qadam: Sana muddati</span>
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <div className="flex items-center gap-1 text-black font-black text-[11px] sm:text-xs uppercase">
+                  <Calendar className="w-3.5 h-3.5 text-amber-700 stroke-[2.5]" />
+                  <span>1-Qadam: Sana muddati</span>
+                </div>
+                <span className="text-[9px] font-bold text-stone-500 bg-stone-100 px-1.5 py-0.5 border border-stone-300">
+                  Ixtiyoriy
+                </span>
               </div>
               <p className="text-[10px] text-stone-600 font-bold">
-                Tahlil qilinadigan sana oralig'i:
+                Tahlil qilinadigan sana oralig'i (ochiq):
               </p>
             </div>
 
@@ -766,15 +801,20 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                   <Wrench className="w-3.5 h-3.5 text-amber-700 stroke-[2.5]" />
                   <span>2-Qadam: Avto moy nomi</span>
                 </div>
-                {selectedPartNames.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedPartNames([])}
-                    className="text-[10px] font-bold text-amber-800 hover:text-red-700 underline cursor-pointer"
-                  >
-                    Barchasi
-                  </button>
-                )}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-black text-amber-900 bg-amber-200 px-1.5 py-0.5 border border-amber-400 uppercase">
+                    Majburiy
+                  </span>
+                  {selectedPartNames.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedPartNames([])}
+                      className="text-[10px] font-bold text-amber-800 hover:text-red-700 underline cursor-pointer"
+                    >
+                      Barchasi
+                    </button>
+                  )}
+                </div>
               </div>
               <p className="text-[10px] text-stone-600 font-bold">
                 Mavjud unikal moylardan bir yoki bir nechtasini tanlang:
@@ -848,15 +888,20 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                   <Tag className="w-3.5 h-3.5 text-amber-700 stroke-[2.5]" />
                   <span>3-Qadam: Brend tanlash</span>
                 </div>
-                {selectedBrands.length > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setSelectedBrands([])}
-                    className="text-[10px] font-bold text-amber-800 hover:text-red-700 underline cursor-pointer"
-                  >
-                    Barchasi
-                  </button>
-                )}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[9px] font-bold text-stone-500 bg-stone-100 px-1.5 py-0.5 border border-stone-300">
+                    Ixtiyoriy
+                  </span>
+                  {selectedBrands.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedBrands([])}
+                      className="text-[10px] font-bold text-amber-800 hover:text-red-700 underline cursor-pointer"
+                    >
+                      Barchasi
+                    </button>
+                  )}
+                </div>
               </div>
               <p className="text-[10px] text-stone-600 font-bold">
                 Mavjud brendlardan bir yoki bir nechtasini tanlang:
@@ -915,109 +960,139 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
           </div>
         </div>
 
-        {/* 4-QADAM: KOD, API, LITR VA DAVLAT BO'YICHA FILTRLASH */}
-        <div className="border-t-2 border-amber-200 pt-3">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-            <div className="flex items-center gap-1.5 text-xs font-black uppercase text-black">
-              <Layers className="w-3.5 h-3.5 text-amber-700 stroke-[2.5]" />
-              <span>Qo'shimcha filtrlar (Kod, API, Litr, Davlat — ko'p tanlovli):</span>
+        {/* 4-QADAM: KOD, API, LITR, DAVLAT VA YETKAZIB BERUVCHI BO'YICHA FILTRLASH */}
+        {selectedPartNames.length === 0 ? (
+          <div className="border-t-2 border-amber-200 pt-3">
+            <div className="p-3 bg-amber-50/80 border border-dashed border-amber-400 text-stone-700 flex items-center gap-2">
+              <Layers className="w-4 h-4 text-amber-700 shrink-0" />
+              <p className="text-xs font-bold">
+                <span className="text-black font-black uppercase">Qo'shimcha filtrlar:</span> Kod, API, Litr, Davlat va Yetkazib beruvchi bo'yicha saralash uchun avval yuqoridan kamida bitta <span className="underline decoration-amber-600 font-black text-black">«Avto moy nomi»</span>ni tanlang.
+              </p>
+            </div>
+          </div>
+        ) : (
+          <div className="border-t-2 border-amber-200 pt-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-1.5 text-xs font-black uppercase text-black">
+                <Layers className="w-3.5 h-3.5 text-amber-700 stroke-[2.5]" />
+                <span>Qo'shimcha filtrlar (Kod, API, Litr, Davlat, Yetkazib beruvchi — faqat tanlangan moyga mos):</span>
+                {isAdditionalFilterActive && (
+                  <span className="px-1.5 py-0.5 bg-amber-400 border border-amber-600 text-[10px] font-black uppercase">
+                    Filtr faol
+                  </span>
+                )}
+              </div>
               {isAdditionalFilterActive && (
-                <span className="px-1.5 py-0.5 bg-amber-400 border border-amber-600 text-[10px] font-black uppercase">
-                  Filtr faol
-                </span>
+                <button
+                  type="button"
+                  onClick={handleResetAdditionalFilters}
+                  className="text-[11px] font-black text-red-700 hover:text-red-900 underline cursor-pointer self-start sm:self-auto"
+                >
+                  Qo'shimcha filtrlarni tozalash
+                </button>
               )}
             </div>
-            {isAdditionalFilterActive && (
-              <button
-                type="button"
-                onClick={handleResetAdditionalFilters}
-                className="text-[11px] font-black text-red-700 hover:text-red-900 underline cursor-pointer self-start sm:self-auto"
-              >
-                Qo'shimcha filtrlarni tozalash
-              </button>
-            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
+              {/* KOD BO'YICHA */}
+              <div className="bg-yellow-50/70 border border-amber-300 p-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-black text-stone-700">Kod:</span>
+                  <span className="text-[9px] font-mono font-bold text-stone-500">{availableCodes.length} xil</span>
+                </div>
+                <MultiSelectDropdown
+                  label="Kod"
+                  allLabel="Barcha kodlar"
+                  options={availableCodes.map((c) => ({
+                    value: c.code,
+                    label: c.code,
+                    count: c.count,
+                  }))}
+                  selectedValues={selectedCodes}
+                  onChange={setSelectedCodes}
+                  mono={true}
+                />
+              </div>
+
+              {/* API BO'YICHA */}
+              <div className="bg-yellow-50/70 border border-amber-300 p-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-black text-stone-700">API:</span>
+                  <span className="text-[9px] font-mono font-bold text-stone-500">{availableApis.length} xil</span>
+                </div>
+                <MultiSelectDropdown
+                  label="API"
+                  allLabel="Barcha APIlar"
+                  options={availableApis.map((a) => ({
+                    value: a.api,
+                    label: a.api,
+                    count: a.count,
+                  }))}
+                  selectedValues={selectedApis}
+                  onChange={setSelectedApis}
+                  mono={true}
+                />
+              </div>
+
+              {/* LITR BO'YICHA */}
+              <div className="bg-yellow-50/70 border border-amber-300 p-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-black text-stone-700">Litr:</span>
+                  <span className="text-[9px] font-mono font-bold text-stone-500">{availableLiters.length} xil</span>
+                </div>
+                <MultiSelectDropdown
+                  label="Litr"
+                  allLabel="Barcha litrlar"
+                  options={availableLiters.map((l) => ({
+                    value: l.liters,
+                    label: `${l.liters} L`,
+                    count: l.count,
+                  }))}
+                  selectedValues={selectedLiters}
+                  onChange={setSelectedLiters}
+                />
+              </div>
+
+              {/* DAVLAT BO'YICHA */}
+              <div className="bg-yellow-50/70 border border-amber-300 p-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-black text-stone-700">Davlat:</span>
+                  <span className="text-[9px] font-mono font-bold text-stone-500">{availableCountries.length} xil</span>
+                </div>
+                <MultiSelectDropdown
+                  label="Davlat"
+                  allLabel="Barcha davlatlar"
+                  options={availableCountries.map((d) => ({
+                    value: d.country,
+                    label: d.country,
+                    count: d.count,
+                  }))}
+                  selectedValues={selectedCountries}
+                  onChange={setSelectedCountries}
+                />
+              </div>
+
+              {/* YETKAZIB BERUVCHI BO'YICHA */}
+              <div className="bg-yellow-50/70 border border-amber-300 p-2 space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] uppercase font-black text-stone-700">Yetkazib beruvchi:</span>
+                  <span className="text-[9px] font-mono font-bold text-stone-500">{availableSuppliers.length} ta</span>
+                </div>
+                <MultiSelectDropdown
+                  label="Yetkazib beruvchi"
+                  allLabel="Barcha yetkazib beruvchilar"
+                  options={availableSuppliers.map((s) => ({
+                    value: s.supplier,
+                    label: s.supplier,
+                    count: s.count,
+                  }))}
+                  selectedValues={selectedSuppliers}
+                  onChange={setSelectedSuppliers}
+                />
+              </div>
+            </div>
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
-            {/* KOD BO'YICHA */}
-            <div className="bg-yellow-50/70 border border-amber-300 p-2 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase font-black text-stone-700">Kod:</span>
-                <span className="text-[9px] font-mono font-bold text-stone-500">{availableCodes.length} xil</span>
-              </div>
-              <MultiSelectDropdown
-                label="Kod"
-                allLabel="Barcha kodlar"
-                options={availableCodes.map((c) => ({
-                  value: c.code,
-                  label: c.code,
-                  count: c.count,
-                }))}
-                selectedValues={selectedCodes}
-                onChange={setSelectedCodes}
-                mono={true}
-              />
-            </div>
-
-            {/* API BO'YICHA */}
-            <div className="bg-yellow-50/70 border border-amber-300 p-2 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase font-black text-stone-700">API:</span>
-                <span className="text-[9px] font-mono font-bold text-stone-500">{availableApis.length} xil</span>
-              </div>
-              <MultiSelectDropdown
-                label="API"
-                allLabel="Barcha APIlar"
-                options={availableApis.map((a) => ({
-                  value: a.api,
-                  label: a.api,
-                  count: a.count,
-                }))}
-                selectedValues={selectedApis}
-                onChange={setSelectedApis}
-                mono={true}
-              />
-            </div>
-
-            {/* LITR BO'YICHA */}
-            <div className="bg-yellow-50/70 border border-amber-300 p-2 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase font-black text-stone-700">Litr:</span>
-                <span className="text-[9px] font-mono font-bold text-stone-500">{availableLiters.length} xil</span>
-              </div>
-              <MultiSelectDropdown
-                label="Litr"
-                allLabel="Barcha litrlar"
-                options={availableLiters.map((l) => ({
-                  value: l.liters,
-                  label: `${l.liters} L`,
-                  count: l.count,
-                }))}
-                selectedValues={selectedLiters}
-                onChange={setSelectedLiters}
-              />
-            </div>
-
-            {/* DAVLAT BO'YICHA */}
-            <div className="bg-yellow-50/70 border border-amber-300 p-2 space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] uppercase font-black text-stone-700">Davlat:</span>
-                <span className="text-[9px] font-mono font-bold text-stone-500">{availableCountries.length} xil</span>
-              </div>
-              <MultiSelectDropdown
-                label="Davlat"
-                allLabel="Barcha davlatlar"
-                options={availableCountries.map((d) => ({
-                  value: d.country,
-                  label: d.country,
-                  count: d.count,
-                }))}
-                selectedValues={selectedCountries}
-                onChange={setSelectedCountries}
-              />
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       {/* ========================================================================= */}
@@ -1054,6 +1129,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                   {selectedApis.length > 0 && <span className="text-purple-800 ml-1.5">[API: {selectedApis.join(', ')}]</span>}
                   {selectedLiters.length > 0 && <span className="text-amber-800 ml-1.5">[{selectedLiters.map((l) => `${l}L`).join(', ')}]</span>}
                   {selectedCountries.length > 0 && <span className="text-stone-800 ml-1.5">[{selectedCountries.join(', ')}]</span>}
+                  {selectedSuppliers.length > 0 && <span className="text-emerald-800 ml-1.5">[{selectedSuppliers.join(', ')}]</span>}
                 </p>
               </div>
             </div>

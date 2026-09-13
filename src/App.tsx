@@ -222,6 +222,7 @@ export default function App() {
         {activeTab === 'autoparts' && (
           <AutoPartsTable
             parts={autoParts}
+            suppliers={suppliers}
             onOpenAddModal={() => {
               setEditingAutoPart(null);
               setIsAddAutoPartOpen(true);

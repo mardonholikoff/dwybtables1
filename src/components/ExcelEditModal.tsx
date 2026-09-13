@@ -10,8 +10,11 @@ import {
   X,
   FileCheck,
   Info,
+  Plus,
+  Trash2,
+  PlusCircle,
 } from 'lucide-react';
-import { AutoPart } from '../types';
+import { AutoPart, Supplier } from '../types';
 import {
   downloadEditableAutoPartsExcel,
   ExcelValidationResult,
@@ -22,21 +25,27 @@ interface ExcelDownloadWarningModalProps {
   isOpen: boolean;
   onClose: () => void;
   parts: AutoPart[];
+  suppliers?: Supplier[];
 }
 
 export const ExcelDownloadWarningModal: React.FC<ExcelDownloadWarningModalProps> = ({
   isOpen,
   onClose,
   parts,
+  suppliers = [],
 }) => {
   const [isDownloading, setIsDownloading] = useState(false);
+  const [emptyRowsToAdd, setEmptyRowsToAdd] = useState(1);
 
   if (!isOpen) return null;
+
+  const maxExistingOrder = parts.reduce((max, p) => Math.max(max, p.orderNumber || 0), 0);
+  const supplierNames = suppliers.map((s) => s.name).filter(Boolean);
 
   const handleConfirmDownload = async () => {
     try {
       setIsDownloading(true);
-      await downloadEditableAutoPartsExcel(parts);
+      await downloadEditableAutoPartsExcel(parts, 'Avto_Moylar_Tahrirlash', emptyRowsToAdd, supplierNames);
       setTimeout(() => {
         setIsDownloading(false);
         onClose();
@@ -49,7 +58,7 @@ export const ExcelDownloadWarningModal: React.FC<ExcelDownloadWarningModalProps>
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="bg-amber-50 border-3 border-amber-600 shadow-2xl max-w-xl w-full p-4 sm:p-6 text-black space-y-4">
+      <div className="bg-amber-50 border-3 border-amber-600 shadow-2xl max-w-xl w-full p-4 sm:p-6 text-black space-y-4 max-h-[95vh] overflow-y-auto">
         {/* Modal Header */}
         <div className="flex items-start justify-between gap-3 border-b-2 border-amber-300 pb-3">
           <div className="flex items-center gap-2.5">
@@ -61,7 +70,7 @@ export const ExcelDownloadWarningModal: React.FC<ExcelDownloadWarningModalProps>
                 Jadvalni yuklab tahrirlash
               </h2>
               <p className="text-xs text-stone-700 font-bold">
-                Jami: <span className="text-amber-900 font-black">{parts.length} ta</span> avto moy yozuvi
+                Mavjud bazada: <span className="text-amber-900 font-black">{parts.length} ta</span> avto moy yozuvi
               </p>
             </div>
           </div>
@@ -75,6 +84,48 @@ export const ExcelDownloadWarningModal: React.FC<ExcelDownloadWarningModalProps>
           </button>
         </div>
 
+        {/* Qator qo'shish (Add Row) sozlamasi */}
+        <div className="bg-emerald-50 border-2 border-emerald-600 p-3.5 space-y-2.5">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-2">
+              <PlusCircle className="w-5 h-5 text-emerald-800 stroke-[2.5]" />
+              <span className="text-xs sm:text-sm font-black text-emerald-950 uppercase tracking-wide">
+                Excel faylga yangi qator qo'shish:
+              </span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-white border-2 border-emerald-500 px-2 py-1 shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setEmptyRowsToAdd((prev) => Math.max(0, prev - 1))}
+                className="w-6 h-6 flex items-center justify-center bg-stone-200 hover:bg-stone-300 border border-stone-400 font-black text-xs cursor-pointer active:scale-90"
+                title="Qator sonini kamaytirish"
+              >
+                -
+              </button>
+              <span className="w-8 text-center font-black text-sm text-emerald-950 font-mono">
+                {emptyRowsToAdd}
+              </span>
+              <button
+                type="button"
+                onClick={() => setEmptyRowsToAdd((prev) => Math.min(50, prev + 1))}
+                className="w-6 h-6 flex items-center justify-center bg-emerald-300 hover:bg-emerald-400 border border-emerald-600 font-black text-xs cursor-pointer active:scale-90"
+                title="Yana bitta qator qo'shish"
+              >
+                +
+              </button>
+            </div>
+          </div>
+
+          <div className="text-[11px] sm:text-xs text-emerald-900 font-bold space-y-1">
+            <p>
+              Yuklanadigan Excel faylning oxiriga <span className="font-black text-emerald-950 underline">{emptyRowsToAdd} ta yangi bo'sh qator</span> qo'shiladi.
+            </p>
+            <p className="text-stone-700 font-medium">
+              Ushbu qatorlarga <span className="font-black text-black">Tartib raqam (№ {maxExistingOrder + 1}{emptyRowsToAdd > 1 ? ` - № ${maxExistingOrder + emptyRowsToAdd}` : ''})</span> va <span className="font-black text-black">Sistema vaqti</span> avtomatik biriktiriladi. Format va ramkalari tepadagi qatorlar bilan 100% bir xil tayyorlanadi.
+            </p>
+          </div>
+        </div>
+
         {/* Ogohlantirish matni */}
         <div className="bg-amber-100/90 border-2 border-amber-500 p-3.5 space-y-2.5">
           <div className="flex items-center gap-2 text-amber-900 font-black text-xs uppercase tracking-wider">
@@ -83,7 +134,7 @@ export const ExcelDownloadWarningModal: React.FC<ExcelDownloadWarningModalProps>
           </div>
 
           <p className="text-xs sm:text-sm font-black text-black leading-relaxed">
-            Hozir <span className="underline decoration-amber-700 decoration-2 font-black text-amber-950">«Roziman»</span> tugmasini bosganingizdan keyin jadvalni ustun va qatorlariga umuman o'zgartirish kiritmasdan faqatgina ichidagi qiymatlarni o'zgartirishingiz kerak!
+            Hozir <span className="underline decoration-amber-700 decoration-2 font-black text-amber-950">«Roziman»</span> tugmasini bosganingizdan keyin jadvaldagi mavjud ma'lumotlarni o'zgartirishingiz yoki tayyorlangan <span className="underline decoration-emerald-700 decoration-2 font-black text-emerald-950">yangi qatorlarga ma'lumot kiritishingiz</span> mumkin!
           </p>
 
           <ul className="text-[11px] sm:text-xs text-stone-800 font-bold space-y-1.5 list-disc pl-4 border-t border-amber-300/80 pt-2">
@@ -91,19 +142,19 @@ export const ExcelDownloadWarningModal: React.FC<ExcelDownloadWarningModalProps>
               <span className="font-black text-black">Ustunlar:</span> Sarlavhalar nomini, tartibini o'zgartirmang, yangi ustun qo'shmang va o'chirmang.
             </li>
             <li>
-              <span className="font-black text-black">Qatorlar:</span> Yangi qator qo'shmang va mavjud qatorlarni o'chirmang.
+              <span className="font-black text-black">Tizim ID:</span> Mavjud qatorlardagi 1-ustun (Tizim ID)ga tegmang. Yangi qatorlarda Tizim ID katagini bo'sh qoldiring — tizim saqlash vaqtida unga avtomatik unikal ID beradi.
             </li>
             <li>
-              <span className="font-black text-black">Tizim ID:</span> 1-ustundagi Tizim ID yozuviga tegmang (u har bir mahsulotni aniq taniydi).
+              <span className="font-black text-black">Majburiy maydonlar:</span> Avto moy nomi, Kod, Davlat, Brend, Yetkazib beruvchi, Narx, Sana va Manbaa to'ldirilishi shart! Bo'sh qolsa tizim ogohlantirish beradi va bazaga kiritmaydi.
+            </li>
+            <li className="bg-amber-100/90 p-1.5 -ml-2 rounded border border-amber-400">
+              <span className="font-black text-amber-950">Yetkazib beruvchi talabi:</span> Yetkazib beruvchi nomi albatta 1-jadval (Yetkazib beruvchilar)da mavjud bo'lganlardan biri bo'lishi shart! Agar ro'yxatda yo'q yetkazib beruvchi yozilsa, jadval bazaga qabul qilinmaydi.
             </li>
             <li>
-              <span className="font-black text-black">Format:</span> Jadval chiroyli chizilgan qora ramkalari bilan <span className="font-mono font-black text-emerald-900">.xlsx</span> formatida yuklanadi.
+              <span className="font-black text-black">Ixtiyoriy maydonlar:</span> <span className="underline decoration-stone-500 font-bold">API</span>, <span className="underline decoration-stone-500 font-bold">Litr</span> va <span className="underline decoration-stone-500 font-bold">Izoh</span> ustunlarini bo'sh qoldirish mumkin.
             </li>
             <li>
-              <span className="font-black text-black">Ixtiyoriy maydonlar:</span> <span className="underline decoration-stone-500 font-bold">API</span>, <span className="underline decoration-stone-500 font-bold">Litr</span> va <span className="underline decoration-stone-500 font-bold">Izoh</span> ustunlarini bo'sh qoldirish mumkin (ular ixtiyoriy).
-            </li>
-            <li>
-              <span className="font-black text-black">Qayta yuklash:</span> Tahrirlab bo'lgach, «Tahrirlangan jadvalni yuklash» tugmasi orqali yuklaysiz. Tizim faqat to'liq mos keluvchi jadvalni qabul qiladi.
+              <span className="font-black text-black">Qayta yuklash:</span> Tahrirlab bo'lgach, «Tahrirlangan jadvalni yuklash» tugmasi orqali yuklaysiz. Yangi qatorlar avtomatik tekshirilib bazaga qo'shiladi.
             </li>
           </ul>
         </div>
@@ -132,7 +183,7 @@ export const ExcelDownloadWarningModal: React.FC<ExcelDownloadWarningModalProps>
             ) : (
               <>
                 <Download className="w-4 h-4 stroke-[2.5]" />
-                <span>Roziman, yuklab olish (.xlsx)</span>
+                <span>Roziman, yuklab olish ({parts.length + emptyRowsToAdd} qator)</span>
               </>
             )}
           </button>
@@ -247,11 +298,23 @@ export const ExcelUploadReviewModal: React.FC<ExcelUploadReviewModalProps> = ({
                     Tuzilish to'liq mos keldi (Barcha ustun va qatorlar tekshirildi)
                   </span>
                 </div>
-                <span className="px-2 py-0.5 bg-emerald-200 border border-emerald-600 text-xs font-black text-emerald-950">
-                  {changedParts.length > 0
-                    ? `${changedParts.length} ta yozuvda o'zgarish bor`
-                    : "O'zgarishlar yo'q"}
-                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  {result.newRowsCount > 0 && (
+                    <span className="px-2 py-0.5 bg-blue-100 border border-blue-600 text-xs font-black text-blue-950">
+                      +{result.newRowsCount} ta yangi qator
+                    </span>
+                  )}
+                  {result.updatedRowsCount > 0 && (
+                    <span className="px-2 py-0.5 bg-amber-100 border border-amber-600 text-xs font-black text-amber-950">
+                      {result.updatedRowsCount} ta tahrirlangan qator
+                    </span>
+                  )}
+                  {changedParts.length === 0 && (
+                    <span className="px-2 py-0.5 bg-stone-100 border border-stone-400 text-xs font-black text-stone-700">
+                      O'zgarishlar yo'q
+                    </span>
+                  )}
+                </div>
               </div>
 
               {/* Hech qanday o'zgarish bo'lmasa */}
@@ -261,7 +324,7 @@ export const ExcelUploadReviewModal: React.FC<ExcelUploadReviewModalProps> = ({
                     Jadvaldagi barcha qiymatlar bazadagi hozirgi qiymatlar bilan bir xil.
                   </p>
                   <p className="text-[11px] text-stone-600 font-bold">
-                    Hech bir mahsulot narxi yoki parametri o'zgartirilmagan.
+                    Hech bir yangi mahsulot qo'shilmagan yoki mavjud parametrlar o'zgartirilmagan.
                   </p>
                 </div>
               )}
@@ -270,9 +333,9 @@ export const ExcelUploadReviewModal: React.FC<ExcelUploadReviewModalProps> = ({
               {changesList.length > 0 && (
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs font-black uppercase text-black">
-                    <span>Aniqlangan o'zgarishlar ({changesList.length} ta parametr):</span>
+                    <span>Aniqlangan o'zgarishlar ({changesList.length} ta yozuv / parametr):</span>
                     <span className="text-[11px] text-stone-600 font-mono">
-                      {changedParts.length} ta qator
+                      Jami saqlanadigan: {changedParts.length} ta mahsulot
                     </span>
                   </div>
 
@@ -282,31 +345,40 @@ export const ExcelUploadReviewModal: React.FC<ExcelUploadReviewModalProps> = ({
                         <tr className="bg-amber-200 border-b-2 border-amber-400 text-[11px] font-black uppercase text-black">
                           <th className="p-2 border-r border-amber-300 text-center w-12">№</th>
                           <th className="p-2 border-r border-amber-300 text-left">Avto moy nomi</th>
-                          <th className="p-2 border-r border-amber-300 text-left">O'zgargan maydon</th>
+                          <th className="p-2 border-r border-amber-300 text-left">Holat / Maydon</th>
                           <th className="p-2 border-r border-amber-300 text-left bg-rose-50 text-rose-900">Eski qiymat</th>
                           <th className="p-2 text-left bg-emerald-50 text-emerald-900">Yangi qiymat</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-amber-200">
-                        {changesList.map((ch, idx) => (
-                          <tr key={idx} className="hover:bg-yellow-50">
-                            <td className="p-1.5 border-r border-amber-200 text-center font-mono font-bold text-stone-700">
-                              {ch.orderNumber}
-                            </td>
-                            <td className="p-1.5 border-r border-amber-200 font-black text-black">
-                              {ch.partName}
-                            </td>
-                            <td className="p-1.5 border-r border-amber-200 font-bold text-amber-900">
-                              {ch.fieldLabel}
-                            </td>
-                            <td className="p-1.5 border-r border-amber-200 font-mono text-rose-800 bg-rose-50/40 line-through">
-                              {ch.field === 'price' ? formatUSD(Number(ch.oldValue)) : String(ch.oldValue || '—')}
-                            </td>
-                            <td className="p-1.5 font-mono font-black text-emerald-900 bg-emerald-50/50">
-                              {ch.field === 'price' ? formatUSD(Number(ch.newValue)) : String(ch.newValue || '—')}
-                            </td>
-                          </tr>
-                        ))}
+                        {changesList.map((ch, idx) => {
+                          const isNew = ch.field === 'new_entry';
+                          return (
+                            <tr key={idx} className={isNew ? "bg-emerald-50/70 hover:bg-emerald-100/70" : "hover:bg-yellow-50"}>
+                              <td className="p-1.5 border-r border-amber-200 text-center font-mono font-bold text-stone-700">
+                                {ch.orderNumber}
+                              </td>
+                              <td className="p-1.5 border-r border-amber-200 font-black text-black">
+                                {ch.partName}
+                              </td>
+                              <td className="p-1.5 border-r border-amber-200 font-bold">
+                                {isNew ? (
+                                  <span className="px-1.5 py-0.5 bg-emerald-600 text-white font-black text-[10px] uppercase tracking-wider">
+                                    Yangi qator
+                                  </span>
+                                ) : (
+                                  <span className="text-amber-900">{ch.fieldLabel}</span>
+                                )}
+                              </td>
+                              <td className="p-1.5 border-r border-amber-200 font-mono text-rose-800 bg-rose-50/40 line-through">
+                                {ch.field === 'price' ? formatUSD(Number(ch.oldValue)) : String(ch.oldValue || '—')}
+                              </td>
+                              <td className="p-1.5 font-mono font-black text-emerald-900 bg-emerald-50/50">
+                                {ch.field === 'price' ? formatUSD(Number(ch.newValue)) : String(ch.newValue || '—')}
+                              </td>
+                            </tr>
+                          );
+                        })}
                       </tbody>
                     </table>
                   </div>
