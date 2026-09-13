@@ -15,6 +15,7 @@ import {
   deleteSupplierFromDb,
   saveAutoPartToDb,
   deleteAutoPartFromDb,
+  saveBatchAutoPartsToDb,
   getCachedSuppliers,
   getCachedAutoParts,
 } from './lib/firestoreService';
@@ -147,6 +148,26 @@ export default function App() {
     }
   };
 
+  // 2-Jadval: Excel orqali ommaviy tahrirlangan mahsulotlarni saqlash (Firebase batch write)
+  const handleBatchUpdateAutoParts = async (updatedParts: AutoPart[]) => {
+    if (!isOnline) {
+      alert('Oflayn rejimda ma\'lumotlarni bazaga saqlab bo\'lmaydi! Internet aloqasini tekshiring.');
+      return;
+    }
+
+    try {
+      await saveBatchAutoPartsToDb(updatedParts);
+      setAutoParts((prev) => {
+        const map = new Map<string, AutoPart>(prev.map((p) => [p.id, p]));
+        updatedParts.forEach((p) => map.set(p.id, p));
+        return Array.from(map.values()).sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0));
+      });
+    } catch (err: any) {
+      alert(err?.message || 'Ommaviy saqlashda xatolik yuz berdi');
+      throw err;
+    }
+  };
+
   // Mavjud barcha yetkazib beruvchilardagi unikal mahsulotlar (1-jadval uchun)
   const allAvailableProducts = useMemo(() => {
     const set = new Set<string>();
@@ -210,6 +231,7 @@ export default function App() {
               setIsAddAutoPartOpen(true);
             }}
             onDeletePart={handleDeleteAutoPart}
+            onBatchUpdateParts={handleBatchUpdateAutoParts}
           />
         )}
 

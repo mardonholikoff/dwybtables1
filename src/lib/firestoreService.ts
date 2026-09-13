@@ -3,6 +3,7 @@ import {
   doc,
   setDoc,
   deleteDoc,
+  writeBatch,
   onSnapshot,
   query,
   orderBy,
@@ -512,4 +513,33 @@ export async function deleteAutoPartFromDb(id: string): Promise<void> {
     throw new Error('Oflayn rejimda yozuvni o\'chirish imkoniyati cheklangan!');
   }
   await deleteDoc(doc(db, AUTOPARTS_COLLECTION, id));
+}
+
+// Bulk update Auto Parts from edited Excel
+export async function saveBatchAutoPartsToDb(updatedParts: AutoPart[]): Promise<void> {
+  if (!navigator.onLine) {
+    throw new Error('Oflayn rejimda ma\'lumotlarni bazaga saqlab bo\'lmaydi! Internet aloqasini tekshiring.');
+  }
+  if (!updatedParts || updatedParts.length === 0) {
+    return;
+  }
+
+  // Firestore batch limit is 500
+  const BATCH_SIZE = 400;
+  for (let i = 0; i < updatedParts.length; i += BATCH_SIZE) {
+    const chunk = updatedParts.slice(i, i + BATCH_SIZE);
+    const batch = writeBatch(db);
+    for (const part of chunk) {
+      const docRef = doc(db, AUTOPARTS_COLLECTION, part.id);
+      batch.set(docRef, cleanForFirestore(part), { merge: true });
+    }
+    await batch.commit();
+  }
+
+  // Update local cache
+  const cached = getCachedAutoParts();
+  const map = new Map<string, AutoPart>(cached.map((p) => [p.id, p]));
+  updatedParts.forEach((p) => map.set(p.id, p));
+  const newCache = Array.from(map.values()).sort((a, b) => (a.orderNumber || 0) - (b.orderNumber || 0));
+  localStorage.setItem(AUTOPARTS_CACHE_KEY, JSON.stringify(newCache));
 }

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import {
   Wrench,
   Plus,
@@ -18,18 +18,30 @@ import {
   RotateCcw,
   Search,
   X,
+  Upload,
+  FileEdit,
+  FileUp,
 } from 'lucide-react';
 import { AutoPart } from '../types';
 import { exportAutoPartsToExcel } from '../utils/excelExport';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { formatUSD } from '../utils/formatCurrency';
 import { MultiSelectDropdown } from './MultiSelectDropdown';
+import {
+  ExcelDownloadWarningModal,
+  ExcelUploadReviewModal,
+} from './ExcelEditModal';
+import {
+  validateAndParseEditedExcel,
+  ExcelValidationResult,
+} from '../utils/excelEditableService';
 
 interface AutoPartsTableProps {
   parts: AutoPart[];
   onOpenAddModal: () => void;
   onEditPart: (part: AutoPart) => void;
   onDeletePart: (id: string) => void;
+  onBatchUpdateParts?: (parts: AutoPart[]) => Promise<void>;
 }
 
 export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
@@ -37,11 +49,20 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
   onOpenAddModal,
   onEditPart,
   onDeletePart,
+  onBatchUpdateParts,
 }) => {
   const isOnline = useOnlineStatus();
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   // Mobilda ko'rinish rejimi: 'cards' (ixcham kartalar) yoki 'table' (gorizontal suriladigan jadval)
   const [mobileViewMode, setMobileViewMode] = useState<'cards' | 'table'>('cards');
+
+  // Excel tahrirlash va yuklash holatlari
+  const [isDownloadWarningOpen, setIsDownloadWarningOpen] = useState(false);
+  const [isUploadReviewOpen, setIsUploadReviewOpen] = useState(false);
+  const [uploadValidationResult, setUploadValidationResult] = useState<ExcelValidationResult | null>(null);
+  const [isApplyingBatch, setIsApplyingBatch] = useState(false);
+  const [isParsingExcel, setIsParsingExcel] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Multi-select filtr holatlari: moy nomi, kod, api, litr, davlat, brend, yetkazib beruvchi, manbaa
   const [filterPartNames, setFilterPartNames] = useState<string[]>([]);
@@ -281,6 +302,43 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
     exportAutoPartsToExcel(filteredParts);
   };
 
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsParsingExcel(true);
+      const res = await validateAndParseEditedExcel(file, parts);
+      setUploadValidationResult(res);
+      setIsUploadReviewOpen(true);
+    } catch (err: any) {
+      alert(`Faylni tekshirishda kutilmagan xatolik: ${err?.message || 'Noma\'lum xatolik'}`);
+    } finally {
+      setIsParsingExcel(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleApplyBatchChanges = async (changedParts: AutoPart[]) => {
+    if (!onBatchUpdateParts) {
+      alert('Ommaviy saqlash funksiyasi mavjud emas!');
+      return;
+    }
+    try {
+      setIsApplyingBatch(true);
+      await onBatchUpdateParts(changedParts);
+      setIsUploadReviewOpen(false);
+      setUploadValidationResult(null);
+      alert(`Muvaffaqiyatli saqlandi! ${changedParts.length} ta mahsulot ma'lumotlari yangilandi.`);
+    } catch (err: any) {
+      alert(`Saqlashda xatolik yuz berdi: ${err?.message || 'Noma\'lum xatolik'}`);
+    } finally {
+      setIsApplyingBatch(false);
+    }
+  };
+
   const confirmDelete = (id: string) => {
     if (!isOnline) {
       alert('Oflayn rejimda yozuvni o\'chirish imkoniyati cheklangan!');
@@ -320,17 +378,40 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
           </div>
         </div>
 
-        {/* Buttons: Add & Excel Export */}
+        {/* Buttons: Excel Edit/Download, Upload, Add */}
         <div className="flex items-center gap-2 flex-wrap w-full sm:w-auto">
-          {/* Excel Export */}
+          {/* 1. Jadvalni yuklab tahrirlash */}
+          <button
+            type="button"
+            onClick={() => setIsDownloadWarningOpen(true)}
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-300 hover:bg-amber-400 border-2 border-amber-600 text-black text-xs font-black transition cursor-pointer active:scale-95 shadow-2xs rounded-none"
+            title="Jadvalni tahrirlash uchun qora ramkali Excel (.xlsx) formatida yuklab olish"
+          >
+            <FileEdit className="w-4 h-4 text-amber-950 stroke-[2.5]" />
+            <span>Jadvalni yuklab tahrirlash</span>
+          </button>
+
+          {/* 2. Tahrirlangan jadvalni yuklash */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!isOnline || isParsingExcel}
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-200 hover:bg-emerald-300 border-2 border-emerald-600 text-emerald-950 text-xs font-black transition cursor-pointer active:scale-95 shadow-2xs rounded-none disabled:opacity-50"
+            title="Tahrirlangan Excel jadvalini tekshirib tizimga yuklash"
+          >
+            <Upload className="w-4 h-4 text-emerald-900 stroke-[2.5]" />
+            <span>{isParsingExcel ? "Tekshirilmoqda..." : "Tahrirlangan jadvalni yuklash"}</span>
+          </button>
+
+          {/* Oddiy Excel eksport */}
           <button
             type="button"
             onClick={handleExport}
-            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-200 hover:bg-amber-300 border-2 border-amber-500 text-black text-xs font-black transition cursor-pointer active:scale-95 shadow-2xs rounded-none"
-            title="Avto moylar jadvalini Excel (.xlsx) formatida yuklab olish"
+            className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-100 hover:bg-amber-200 border-2 border-amber-400 text-black text-xs font-bold transition cursor-pointer active:scale-95 shadow-2xs rounded-none"
+            title="Avto moylar jadvalini oddiy Excel (.xlsx) formatida yuklab olish"
           >
-            <FileSpreadsheet className="w-4 h-4 text-emerald-800 stroke-[2.5]" />
-            <span>Excel {isFilterActive ? `(${filteredParts.length})` : '(.xlsx)'}</span>
+            <FileSpreadsheet className="w-4 h-4 text-stone-700 stroke-[2]" />
+            <span>Oddiy Excel</span>
           </button>
 
           {/* Add Part (Disabled when offline) */}
@@ -1160,6 +1241,88 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
           </table>
         </div>
       </div>
+
+      {/* Pastki qism: Tahrirlangan jadvalni yuklash bo'limi */}
+      <div className="bg-yellow-100/95 border-2 border-amber-500 p-3.5 sm:p-4 shadow-sm flex flex-col md:flex-row items-center justify-between gap-3 text-black">
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          <div className="p-2.5 bg-emerald-400 border-2 border-emerald-700 text-emerald-950 shrink-0">
+            <FileUp className="w-5 h-5 stroke-[2.5]" />
+          </div>
+          <div className="min-w-0">
+            <h3 className="text-xs sm:text-sm font-black uppercase tracking-wide text-black flex items-center gap-2">
+              <span>Tahrirlangan jadvalni yuklash</span>
+              <span className="px-1.5 py-0.2 bg-emerald-200 border border-emerald-600 text-[10px] font-black text-emerald-950">
+                .xlsx format
+              </span>
+            </h3>
+            <p className="text-[11px] sm:text-xs text-stone-700 font-bold leading-tight">
+              Faqatgina jadvlaga mos qator va ustunlari bo'lgan jadvalni qabul qiladi va qabul qilingandan so'ng o'zgartirishlarni oladi.
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2 w-full md:w-auto shrink-0 justify-end">
+          {/* Jadvalni yuklab tahrirlash (pastdan ham tezkor olish) */}
+          <button
+            type="button"
+            onClick={() => setIsDownloadWarningOpen(true)}
+            className="flex-1 md:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-300 hover:bg-amber-400 border-2 border-amber-600 text-black text-xs font-black transition cursor-pointer active:scale-95 shadow-2xs"
+            title="Avval jadvalni qora ramkali Excel formatida yuklab olish"
+          >
+            <FileEdit className="w-4 h-4 text-amber-950 stroke-[2.5]" />
+            <span>Jadvalni yuklab tahrirlash</span>
+          </button>
+
+          {/* Tahrirlangan jadvalni yuklash tugmasi */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={!isOnline || isParsingExcel}
+            className="flex-1 md:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 border-2 border-emerald-700 text-emerald-950 text-xs font-black uppercase tracking-wider transition cursor-pointer active:scale-95 shadow-sm disabled:opacity-50"
+            title="Tahrir qilingan Excel faylni tizimga yuklash va tekshirish"
+          >
+            {isParsingExcel ? (
+              <>
+                <div className="w-4 h-4 border-2 border-black border-t-transparent animate-spin rounded-full" />
+                <span>Tekshirilmoqda...</span>
+              </>
+            ) : (
+              <>
+                <Upload className="w-4 h-4 stroke-[2.5]" />
+                <span>Tahrirlangan jadvalni yuklash</span>
+              </>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* Yashirin fayl tanlash inputi (.xlsx va .xls) */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".xlsx, .xls"
+        onChange={handleFileChange}
+        className="hidden"
+      />
+
+      {/* 1. Jadvalni yuklab tahrirlashdan oldingi Ogohlantirish Modali */}
+      <ExcelDownloadWarningModal
+        isOpen={isDownloadWarningOpen}
+        onClose={() => setIsDownloadWarningOpen(false)}
+        parts={parts}
+      />
+
+      {/* 2. Tahrirlangan jadval yuklangandan keyingi Tekshiruv va Tasdiqlash Modali */}
+      <ExcelUploadReviewModal
+        isOpen={isUploadReviewOpen}
+        onClose={() => {
+          setIsUploadReviewOpen(false);
+          setUploadValidationResult(null);
+        }}
+        result={uploadValidationResult}
+        onApplyChanges={handleApplyBatchChanges}
+        isApplying={isApplyingBatch}
+      />
 
       {/* Delete Confirmation Modal */}
       {deleteTargetId && (

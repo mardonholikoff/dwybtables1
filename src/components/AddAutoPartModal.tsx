@@ -163,10 +163,7 @@ export const AddAutoPartModal: React.FC<AddAutoPartModalProps> = ({
     if (!formData.code.trim()) {
       errs.code = 'Kod kiritilishi shart (majburiy)';
     }
-    // api majburiy emas (ixtiyoriy)
-    if (!formData.liters.trim()) {
-      errs.liters = 'Litr kiritilishi shart (majburiy)';
-    }
+    // api va liters majburiy emas (ixtiyoriy)
     if (!formData.country.trim()) {
       errs.country = 'Ishlab chiqarilgan davlat kiritilishi shart (majburiy)';
     }
@@ -465,26 +462,19 @@ export const AddAutoPartModal: React.FC<AddAutoPartModalProps> = ({
             />
           </div>
 
-          {/* 6. Litr (Majburiy) va 7. Ishlab chiqarilgan davlat (Majburiy) */}
+          {/* 6. Litr (Majburiy emas / Ixtiyoriy) va 7. Ishlab chiqarilgan davlat (Majburiy) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-black uppercase tracking-wider text-black block mb-1">
-                6. Litr <span className="text-rose-600">*</span>
+                6. Litr <span className="text-stone-600 text-[10px] font-semibold lowercase">(ixtiyoriy)</span>
               </label>
               <input
                 type="text"
                 value={formData.liters}
                 onChange={(e) => setFormData({ ...formData, liters: e.target.value })}
-                placeholder="Masalan: 1L, 4L, 5L, 20L, 208L..."
-                className={`w-full px-3 py-2 text-xs border-2 bg-white text-black font-bold focus:outline-none rounded-none ${
-                  errors.liters ? 'border-rose-600 bg-rose-50' : 'border-amber-400 focus:border-amber-600'
-                }`}
+                placeholder="Masalan: 1L, 4L, 5L, 20L, 208L (ixtiyoriy)..."
+                className="w-full px-3 py-2 text-xs border-2 border-amber-400 focus:border-amber-600 bg-white text-black font-bold focus:outline-none rounded-none"
               />
-              {errors.liters && (
-                <p className="mt-1 text-[11px] font-bold text-rose-600 flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> {errors.liters}
-                </p>
-              )}
             </div>
 
             <div>
