@@ -23,6 +23,7 @@ import { AutoPart } from '../types';
 import { exportAutoPartsToExcel } from '../utils/excelExport';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { formatUSD } from '../utils/formatCurrency';
+import { MultiSelectDropdown } from './MultiSelectDropdown';
 
 interface AutoPartsTableProps {
   parts: AutoPart[];
@@ -42,19 +43,21 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
   // Mobilda ko'rinish rejimi: 'cards' (ixcham kartalar) yoki 'table' (gorizontal suriladigan jadval)
   const [mobileViewMode, setMobileViewMode] = useState<'cards' | 'table'>('cards');
 
-  // Filtr holatlari: moy nomi, kod, api, litr, davlat, brend, yetkazib beruvchi, narx, sana, manbaa
-  const [filterPartName, setFilterPartName] = useState<string>('');
-  const [filterCode, setFilterCode] = useState<string>('');
-  const [filterApi, setFilterApi] = useState<string>('');
-  const [filterLiters, setFilterLiters] = useState<string>('');
-  const [filterCountry, setFilterCountry] = useState<string>('');
-  const [filterBrand, setFilterBrand] = useState<string>('');
-  const [filterSupplier, setFilterSupplier] = useState<string>('');
+  // Multi-select filtr holatlari: moy nomi, kod, api, litr, davlat, brend, yetkazib beruvchi, manbaa
+  const [filterPartNames, setFilterPartNames] = useState<string[]>([]);
+  const [filterCodes, setFilterCodes] = useState<string[]>([]);
+  const [filterApis, setFilterApis] = useState<string[]>([]);
+  const [filterLiters, setFilterLiters] = useState<string[]>([]);
+  const [filterCountries, setFilterCountries] = useState<string[]>([]);
+  const [filterBrands, setFilterBrands] = useState<string[]>([]);
+  const [filterSuppliers, setFilterSuppliers] = useState<string[]>([]);
+  const [filterSources, setFilterSources] = useState<string[]>([]);
+
+  // Narx va sana oralig'i filtrlari
   const [filterMinPrice, setFilterMinPrice] = useState<string>('');
   const [filterMaxPrice, setFilterMaxPrice] = useState<string>('');
   const [filterStartDate, setFilterStartDate] = useState<string>('');
   const [filterEndDate, setFilterEndDate] = useState<string>('');
-  const [filterSource, setFilterSource] = useState<string>('');
 
   // 1. Bazadagi unikal moy nomlari
   const uniquePartNames = useMemo(() => {
@@ -154,65 +157,93 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
 
   // Filtr faolligini tekshirish
   const isFilterActive = Boolean(
-    filterPartName ||
-    filterCode ||
-    filterApi ||
-    filterLiters ||
-    filterCountry ||
-    filterBrand ||
-    filterSupplier ||
+    filterPartNames.length > 0 ||
+    filterCodes.length > 0 ||
+    filterApis.length > 0 ||
+    filterLiters.length > 0 ||
+    filterCountries.length > 0 ||
+    filterBrands.length > 0 ||
+    filterSuppliers.length > 0 ||
+    filterSources.length > 0 ||
     filterMinPrice !== '' ||
     filterMaxPrice !== '' ||
     filterStartDate ||
-    filterEndDate ||
-    filterSource
+    filterEndDate
   );
 
   const handleResetFilters = () => {
-    setFilterPartName('');
-    setFilterCode('');
-    setFilterApi('');
-    setFilterLiters('');
-    setFilterCountry('');
-    setFilterBrand('');
-    setFilterSupplier('');
+    setFilterPartNames([]);
+    setFilterCodes([]);
+    setFilterApis([]);
+    setFilterLiters([]);
+    setFilterCountries([]);
+    setFilterBrands([]);
+    setFilterSuppliers([]);
+    setFilterSources([]);
     setFilterMinPrice('');
     setFilterMaxPrice('');
     setFilterStartDate('');
     setFilterEndDate('');
-    setFilterSource('');
   };
 
   // Tanlangan filtrlar bo'yicha saralangan / elangan avto moylar ro'yxati
   const filteredParts = useMemo(() => {
     return parts.filter((item) => {
-      // Moy nomi bo'yicha filtr
-      if (filterPartName && item.partName !== filterPartName) {
-        return false;
+      // Moy nomi bo'yicha multi-filtr
+      if (filterPartNames.length > 0) {
+        const itemPart = (item.partName || '').trim().toLowerCase();
+        if (!filterPartNames.some((n) => n.trim().toLowerCase() === itemPart)) {
+          return false;
+        }
       }
-      // Kod bo'yicha filtr
-      if (filterCode && (item.code || '') !== filterCode) {
-        return false;
+      // Kod bo'yicha multi-filtr
+      if (filterCodes.length > 0) {
+        const itemCode = (item.code || '').trim().toLowerCase();
+        if (!filterCodes.some((c) => c.trim().toLowerCase() === itemCode)) {
+          return false;
+        }
       }
-      // API bo'yicha filtr
-      if (filterApi && (item.api || '') !== filterApi) {
-        return false;
+      // API bo'yicha multi-filtr
+      if (filterApis.length > 0) {
+        const itemApi = (item.api || '').trim().toLowerCase();
+        if (!filterApis.some((a) => a.trim().toLowerCase() === itemApi)) {
+          return false;
+        }
       }
-      // Litr bo'yicha filtr
-      if (filterLiters && (item.liters || '') !== filterLiters) {
-        return false;
+      // Litr bo'yicha multi-filtr
+      if (filterLiters.length > 0) {
+        const itemLit = (item.liters || '').trim().toLowerCase();
+        if (!filterLiters.some((l) => l.trim().toLowerCase() === itemLit)) {
+          return false;
+        }
       }
-      // Davlat bo'yicha filtr
-      if (filterCountry && (item.country || '') !== filterCountry) {
-        return false;
+      // Davlat bo'yicha multi-filtr
+      if (filterCountries.length > 0) {
+        const itemCountry = (item.country || '').trim().toLowerCase();
+        if (!filterCountries.some((cnt) => cnt.trim().toLowerCase() === itemCountry)) {
+          return false;
+        }
       }
-      // Brend bo'yicha filtr
-      if (filterBrand && item.brand !== filterBrand) {
-        return false;
+      // Brend bo'yicha multi-filtr
+      if (filterBrands.length > 0) {
+        const itemBrand = (item.brand || '').trim().toLowerCase();
+        if (!filterBrands.some((b) => b.trim().toLowerCase() === itemBrand)) {
+          return false;
+        }
       }
-      // Yetkazib beruvchi bo'yicha filtr
-      if (filterSupplier && item.supplierName !== filterSupplier) {
-        return false;
+      // Yetkazib beruvchi bo'yicha multi-filtr
+      if (filterSuppliers.length > 0) {
+        const itemSup = (item.supplierName || '').trim().toLowerCase();
+        if (!filterSuppliers.some((s) => s.trim().toLowerCase() === itemSup)) {
+          return false;
+        }
+      }
+      // Manba bo'yicha multi-filtr
+      if (filterSources.length > 0) {
+        const itemSrc = (item.source || '').trim().toLowerCase();
+        if (!filterSources.some((src) => src.trim().toLowerCase() === itemSrc)) {
+          return false;
+        }
       }
       // Narx bo'yicha filtr (min va max oralig'i)
       if (filterMinPrice !== '' && !isNaN(Number(filterMinPrice))) {
@@ -228,26 +259,22 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
       if (filterEndDate && item.date > filterEndDate) {
         return false;
       }
-      // Manbaa bo'yicha filtr
-      if (filterSource && item.source !== filterSource) {
-        return false;
-      }
       return true;
     });
   }, [
     parts,
-    filterPartName,
-    filterCode,
-    filterApi,
+    filterPartNames,
+    filterCodes,
+    filterApis,
     filterLiters,
-    filterCountry,
-    filterBrand,
-    filterSupplier,
+    filterCountries,
+    filterBrands,
+    filterSuppliers,
+    filterSources,
     filterMinPrice,
     filterMaxPrice,
     filterStartDate,
     filterEndDate,
-    filterSource,
   ]);
 
   const handleExport = () => {
@@ -364,140 +391,100 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
           )}
         </div>
 
-        {/* Filtr ustunlari */}
+        {/* Filtr ustunlari - Multi-select */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
           {/* 1. Moy nomi */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
-              Moy nomi:
-            </label>
-            <select
-              value={filterPartName}
-              onChange={(e) => setFilterPartName(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
-            >
-              <option value="">Barchasi ({uniquePartNames.length})</option>
-              {uniquePartNames.map((item) => (
-                <option key={item.name} value={item.name}>
-                  {item.name} ({item.count})
-                </option>
-              ))}
-            </select>
-          </div>
+          <MultiSelectDropdown
+            label="Moy nomi:"
+            options={uniquePartNames.map((item) => ({
+              value: item.name,
+              label: item.name,
+              count: item.count,
+            }))}
+            selectedValues={filterPartNames}
+            onChange={setFilterPartNames}
+            placeholder="Barchasi"
+          />
 
           {/* 2. Kod */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
-              Kod:
-            </label>
-            <select
-              value={filterCode}
-              onChange={(e) => setFilterCode(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs font-mono font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
-            >
-              <option value="">Barchasi ({uniqueCodes.length})</option>
-              {uniqueCodes.map((item) => (
-                <option key={item.code} value={item.code}>
-                  {item.code} ({item.count})
-                </option>
-              ))}
-            </select>
-          </div>
+          <MultiSelectDropdown
+            label="Kod:"
+            options={uniqueCodes.map((item) => ({
+              value: item.code,
+              label: item.code,
+              count: item.count,
+            }))}
+            selectedValues={filterCodes}
+            onChange={setFilterCodes}
+            placeholder="Barchasi"
+            mono={true}
+          />
 
           {/* 3. API */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
-              API:
-            </label>
-            <select
-              value={filterApi}
-              onChange={(e) => setFilterApi(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
-            >
-              <option value="">Barchasi ({uniqueApis.length})</option>
-              {uniqueApis.map((item) => (
-                <option key={item.api} value={item.api}>
-                  {item.api} ({item.count})
-                </option>
-              ))}
-            </select>
-          </div>
+          <MultiSelectDropdown
+            label="API:"
+            options={uniqueApis.map((item) => ({
+              value: item.api,
+              label: item.api,
+              count: item.count,
+            }))}
+            selectedValues={filterApis}
+            onChange={setFilterApis}
+            placeholder="Barchasi"
+            mono={true}
+          />
 
           {/* 4. Litr */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
-              Litr:
-            </label>
-            <select
-              value={filterLiters}
-              onChange={(e) => setFilterLiters(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
-            >
-              <option value="">Barchasi ({uniqueLiters.length})</option>
-              {uniqueLiters.map((item) => (
-                <option key={item.liters} value={item.liters}>
-                  {item.liters} ({item.count})
-                </option>
-              ))}
-            </select>
-          </div>
+          <MultiSelectDropdown
+            label="Litr:"
+            options={uniqueLiters.map((item) => ({
+              value: item.liters,
+              label: `${item.liters} L`,
+              count: item.count,
+            }))}
+            selectedValues={filterLiters}
+            onChange={setFilterLiters}
+            placeholder="Barchasi"
+          />
 
           {/* 5. Ishlab chiqarilgan davlat */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
-              Davlat:
-            </label>
-            <select
-              value={filterCountry}
-              onChange={(e) => setFilterCountry(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
-            >
-              <option value="">Barchasi ({uniqueCountries.length})</option>
-              {uniqueCountries.map((item) => (
-                <option key={item.country} value={item.country}>
-                  {item.country} ({item.count})
-                </option>
-              ))}
-            </select>
-          </div>
+          <MultiSelectDropdown
+            label="Davlat:"
+            options={uniqueCountries.map((item) => ({
+              value: item.country,
+              label: item.country,
+              count: item.count,
+            }))}
+            selectedValues={filterCountries}
+            onChange={setFilterCountries}
+            placeholder="Barchasi"
+          />
 
           {/* 6. Brend */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
-              Brend:
-            </label>
-            <select
-              value={filterBrand}
-              onChange={(e) => setFilterBrand(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
-            >
-              <option value="">Barchasi ({uniqueBrands.length})</option>
-              {uniqueBrands.map((item) => (
-                <option key={item.brand} value={item.brand}>
-                  {item.brand} ({item.count})
-                </option>
-              ))}
-            </select>
-          </div>
+          <MultiSelectDropdown
+            label="Brend:"
+            options={uniqueBrands.map((item) => ({
+              value: item.brand,
+              label: item.brand,
+              count: item.count,
+            }))}
+            selectedValues={filterBrands}
+            onChange={setFilterBrands}
+            placeholder="Barchasi"
+          />
 
           {/* 7. Yetkazib beruvchi */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
-              Yetkazib beruvchi:
-            </label>
-            <select
-              value={filterSupplier}
-              onChange={(e) => setFilterSupplier(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
-            >
-              <option value="">Barchasi ({uniqueSuppliers.length})</option>
-              {uniqueSuppliers.map((item) => (
-                <option key={item.supplier} value={item.supplier}>
-                  {item.supplier} ({item.count})
-                </option>
-              ))}
-            </select>
-          </div>
+          <MultiSelectDropdown
+            label="Yetkazib beruvchi:"
+            options={uniqueSuppliers.map((item) => ({
+              value: item.supplier,
+              label: item.supplier,
+              count: item.count,
+            }))}
+            selectedValues={filterSuppliers}
+            onChange={setFilterSuppliers}
+            placeholder="Barchasi"
+          />
 
           {/* 8. Narx ($ / USD) */}
           <div className="space-y-1">
@@ -546,107 +533,113 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
           </div>
 
           {/* 10. Manbaa */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
-              Manbaa:
-            </label>
-            <select
-              value={filterSource}
-              onChange={(e) => setFilterSource(e.target.value)}
-              className="w-full px-2 py-1.5 text-xs font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
-            >
-              <option value="">Barchasi ({uniqueSources.length})</option>
-              {uniqueSources.map((item) => (
-                <option key={item.source} value={item.source}>
-                  {item.source} ({item.count})
-                </option>
-              ))}
-            </select>
-          </div>
+          <MultiSelectDropdown
+            label="Manbaa:"
+            options={uniqueSources.map((item) => ({
+              value: item.source,
+              label: item.source,
+              count: item.count,
+            }))}
+            selectedValues={filterSources}
+            onChange={setFilterSources}
+            placeholder="Barchasi"
+          />
         </div>
 
         {/* Faol filtrlar teglari */}
         {isFilterActive && (
           <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-amber-200 text-[11px]">
             <span className="text-[10px] font-black uppercase text-stone-600">Faol:</span>
-            {filterPartName && (
+            {filterPartNames.length > 0 && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
-                Moy: <strong>{filterPartName}</strong>
+                Moy ({filterPartNames.length}): <strong>{filterPartNames.join(', ')}</strong>
                 <button
                   type="button"
-                  onClick={() => setFilterPartName('')}
+                  onClick={() => setFilterPartNames([])}
                   className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
                 >
                   ×
                 </button>
               </span>
             )}
-            {filterCode && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
-                Kod: <strong>{filterCode}</strong>
+            {filterCodes.length > 0 && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black font-mono">
+                Kod ({filterCodes.length}): <strong>{filterCodes.join(', ')}</strong>
                 <button
                   type="button"
-                  onClick={() => setFilterCode('')}
+                  onClick={() => setFilterCodes([])}
                   className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
                 >
                   ×
                 </button>
               </span>
             )}
-            {filterApi && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
-                API: <strong>{filterApi}</strong>
+            {filterApis.length > 0 && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black font-mono">
+                API ({filterApis.length}): <strong>{filterApis.join(', ')}</strong>
                 <button
                   type="button"
-                  onClick={() => setFilterApi('')}
+                  onClick={() => setFilterApis([])}
                   className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
                 >
                   ×
                 </button>
               </span>
             )}
-            {filterLiters && (
+            {filterLiters.length > 0 && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
-                Litr: <strong>{filterLiters}</strong>
+                Litr ({filterLiters.length}): <strong>{filterLiters.map(l => `${l}L`).join(', ')}</strong>
                 <button
                   type="button"
-                  onClick={() => setFilterLiters('')}
+                  onClick={() => setFilterLiters([])}
                   className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
                 >
                   ×
                 </button>
               </span>
             )}
-            {filterCountry && (
+            {filterCountries.length > 0 && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
-                Davlat: <strong>{filterCountry}</strong>
+                Davlat ({filterCountries.length}): <strong>{filterCountries.join(', ')}</strong>
                 <button
                   type="button"
-                  onClick={() => setFilterCountry('')}
+                  onClick={() => setFilterCountries([])}
                   className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
                 >
                   ×
                 </button>
               </span>
             )}
-            {filterBrand && (
+            {filterBrands.length > 0 && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
-                Brend: <strong>{filterBrand}</strong>
+                Brend ({filterBrands.length}): <strong>{filterBrands.join(', ')}</strong>
                 <button
                   type="button"
-                  onClick={() => setFilterBrand('')}
+                  onClick={() => setFilterBrands([])}
                   className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
                 >
                   ×
                 </button>
               </span>
             )}
-            {filterSupplier && (
+            {filterSuppliers.length > 0 && (
               <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
-                Yetkazuvchi: <strong>{filterSupplier}</strong>
+                Yetkazuvchi ({filterSuppliers.length}): <strong>{filterSuppliers.join(', ')}</strong>
                 <button
                   type="button"
-                  onClick={() => setFilterSupplier('')}
+                  onClick={() => setFilterSuppliers([])}
+                  className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {filterSources.length > 0 && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
+                Manba ({filterSources.length}): <strong>{filterSources.join(', ')}</strong>
+                <button
+                  type="button"
+                  onClick={() => setFilterSources([])}
                   className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
                 >
                   ×
@@ -671,18 +664,6 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
                 <button
                   type="button"
                   onClick={() => { setFilterStartDate(''); setFilterEndDate(''); }}
-                  className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
-                >
-                  ×
-                </button>
-              </span>
-            )}
-            {filterSource && (
-              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
-                Manba: <strong>{filterSource}</strong>
-                <button
-                  type="button"
-                  onClick={() => setFilterSource('')}
                   className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
                 >
                   ×

@@ -37,6 +37,7 @@ import {
 import { AutoPart, Supplier } from '../types';
 import * as XLSX from 'xlsx';
 import { formatUSD } from '../utils/formatCurrency';
+import { MultiSelectDropdown } from './MultiSelectDropdown';
 
 interface AnalyticsViewProps {
   parts: AutoPart[];
@@ -62,17 +63,17 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
-  // 2-BOSQICH: Avto moy turi/nomi (Bazadagi mavjud turlar)
-  const [selectedPartName, setSelectedPartName] = useState<string>('');
+  // 2-BOSQICH: Avto moy turi/nomi (Multi-select, bo'sh bo'lsa barcha moylar tahlil qilinadi)
+  const [selectedPartNames, setSelectedPartNames] = useState<string[]>([]);
 
-  // 3-BOSQICH: Brend tanlash (Tanlangan qismga mos brendlar)
-  const [selectedBrand, setSelectedBrand] = useState<string>('ALL');
+  // 3-BOSQICH: Brend tanlash (Multi-select)
+  const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
 
-  // 4-BOSQICH: Yangi qo'shimcha filtrlar: Kod, API, Litr, Davlat
-  const [selectedCode, setSelectedCode] = useState<string>('ALL');
-  const [selectedApi, setSelectedApi] = useState<string>('ALL');
-  const [selectedLiters, setSelectedLiters] = useState<string>('ALL');
-  const [selectedCountry, setSelectedCountry] = useState<string>('ALL');
+  // 4-BOSQICH: Yangi qo'shimcha filtrlar: Kod, API, Litr, Davlat (Multi-select)
+  const [selectedCodes, setSelectedCodes] = useState<string[]>([]);
+  const [selectedApis, setSelectedApis] = useState<string[]>([]);
+  const [selectedLiters, setSelectedLiters] = useState<string[]>([]);
+  const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
 
   // Grafik sozlamalari: "natural" (egrisimon oval) default qilib qo'yildi
   const [curveType, setCurveType] = useState<'natural' | 'monotone' | 'linear'>('natural');
@@ -104,35 +105,35 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
       .sort((a, b) => b.count - a.count);
   }, [parts]);
 
-  // Agar avto moy hali tanlanmagan bo'lsa, birinchisini avtomatik tanlaymiz
-  const activePartName = useMemo(() => {
-    if (selectedPartName === 'ALL') return 'ALL';
-    if (selectedPartName && uniquePartNames.some((p) => p.name === selectedPartName)) {
-      return selectedPartName;
-    }
-    return uniquePartNames.length > 0 ? uniquePartNames[0].name : '';
-  }, [selectedPartName, uniquePartNames]);
+  // Avto moy nomi matnli ko'rinishi
+  const activePartNameDisplay = useMemo(() => {
+    if (selectedPartNames.length === 0) return 'Barcha avto moylar';
+    if (selectedPartNames.length === 1) return selectedPartNames[0];
+    return `${selectedPartNames.length} ta moy tanlangan`;
+  }, [selectedPartNames]);
 
-  // 2. Mavjud brendlar ro'yxati (tanlangan moyga mos)
+  // 2. Mavjud brendlar ro'yxati (tanlangan moylarga mos)
   const availableBrands = useMemo(() => {
     const brandSet = new Set<string>();
     parts.forEach((p) => {
-      if (activePartName !== 'ALL' && activePartName) {
-        if (p.partName?.trim().toLowerCase() !== activePartName.trim().toLowerCase()) return;
+      if (selectedPartNames.length > 0) {
+        const pName = (p.partName || '').trim().toLowerCase();
+        if (!selectedPartNames.some((n) => n.trim().toLowerCase() === pName)) return;
       }
       if (p.brand && p.brand.trim()) {
         brandSet.add(p.brand.trim());
       }
     });
     return Array.from(brandSet).sort();
-  }, [parts, activePartName]);
+  }, [parts, selectedPartNames]);
 
-  // 3. Tanlangan moyga / umumiy holatga mos unikal Kodlar
+  // 3. Tanlangan moylarga mos unikal Kodlar
   const availableCodes = useMemo(() => {
     const map = new Map<string, number>();
     parts.forEach((p) => {
-      if (activePartName !== 'ALL' && activePartName) {
-        if (p.partName?.trim().toLowerCase() !== activePartName.trim().toLowerCase()) return;
+      if (selectedPartNames.length > 0) {
+        const pName = (p.partName || '').trim().toLowerCase();
+        if (!selectedPartNames.some((n) => n.trim().toLowerCase() === pName)) return;
       }
       const code = p.code?.trim();
       if (code) {
@@ -142,14 +143,15 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
     return Array.from(map.entries())
       .map(([code, count]) => ({ code, count }))
       .sort((a, b) => a.code.localeCompare(b.code));
-  }, [parts, activePartName]);
+  }, [parts, selectedPartNames]);
 
-  // 4. Tanlangan moyga / umumiy holatga mos unikal APIlar
+  // 4. Tanlangan moylarga mos unikal APIlar
   const availableApis = useMemo(() => {
     const map = new Map<string, number>();
     parts.forEach((p) => {
-      if (activePartName !== 'ALL' && activePartName) {
-        if (p.partName?.trim().toLowerCase() !== activePartName.trim().toLowerCase()) return;
+      if (selectedPartNames.length > 0) {
+        const pName = (p.partName || '').trim().toLowerCase();
+        if (!selectedPartNames.some((n) => n.trim().toLowerCase() === pName)) return;
       }
       const api = p.api?.trim();
       if (api) {
@@ -159,14 +161,15 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
     return Array.from(map.entries())
       .map(([api, count]) => ({ api, count }))
       .sort((a, b) => a.api.localeCompare(b.api));
-  }, [parts, activePartName]);
+  }, [parts, selectedPartNames]);
 
-  // 5. Tanlangan moyga / umumiy holatga mos unikal Litrlar
+  // 5. Tanlangan moylarga mos unikal Litrlar
   const availableLiters = useMemo(() => {
     const map = new Map<string, number>();
     parts.forEach((p) => {
-      if (activePartName !== 'ALL' && activePartName) {
-        if (p.partName?.trim().toLowerCase() !== activePartName.trim().toLowerCase()) return;
+      if (selectedPartNames.length > 0) {
+        const pName = (p.partName || '').trim().toLowerCase();
+        if (!selectedPartNames.some((n) => n.trim().toLowerCase() === pName)) return;
       }
       const liters = p.liters?.trim();
       if (liters) {
@@ -176,14 +179,15 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
     return Array.from(map.entries())
       .map(([liters, count]) => ({ liters, count }))
       .sort((a, b) => a.liters.localeCompare(b.liters));
-  }, [parts, activePartName]);
+  }, [parts, selectedPartNames]);
 
-  // 6. Tanlangan moyga / umumiy holatga mos unikal Davlatlar
+  // 6. Tanlangan moylarga mos unikal Davlatlar
   const availableCountries = useMemo(() => {
     const map = new Map<string, number>();
     parts.forEach((p) => {
-      if (activePartName !== 'ALL' && activePartName) {
-        if (p.partName?.trim().toLowerCase() !== activePartName.trim().toLowerCase()) return;
+      if (selectedPartNames.length > 0) {
+        const pName = (p.partName || '').trim().toLowerCase();
+        if (!selectedPartNames.some((n) => n.trim().toLowerCase() === pName)) return;
       }
       const country = p.country?.trim();
       if (country) {
@@ -193,7 +197,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
     return Array.from(map.entries())
       .map(([country, count]) => ({ country, count }))
       .sort((a, b) => a.country.localeCompare(b.country));
-  }, [parts, activePartName]);
+  }, [parts, selectedPartNames]);
 
   // Sana bo'yicha tezkor filtrlar
   const handleQuickDateFilter = (type: 'all' | '30d' | '3m' | '6m' | 'year') => {
@@ -223,61 +227,65 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
 
   // Qo'shimcha filtrlarni tozalash
   const handleResetAdditionalFilters = () => {
-    setSelectedCode('ALL');
-    setSelectedApi('ALL');
-    setSelectedLiters('ALL');
-    setSelectedCountry('ALL');
+    setSelectedCodes([]);
+    setSelectedApis([]);
+    setSelectedLiters([]);
+    setSelectedCountries([]);
   };
 
   const isAdditionalFilterActive =
-    selectedCode !== 'ALL' ||
-    selectedApi !== 'ALL' ||
-    selectedLiters !== 'ALL' ||
-    selectedCountry !== 'ALL';
+    selectedCodes.length > 0 ||
+    selectedApis.length > 0 ||
+    selectedLiters.length > 0 ||
+    selectedCountries.length > 0;
 
   // 7. Tanlangan parametrlar bo'yicha filtrlangan yozuvlar
   const filteredData = useMemo(() => {
-    if (!activePartName && selectedPartName !== 'ALL') return [];
-
     return parts.filter((item) => {
-      // 1. Qism nomi mosligi
-      if (activePartName !== 'ALL') {
-        if (item.partName?.trim().toLowerCase() !== activePartName.trim().toLowerCase()) {
+      // 1. Qism nomi mosligi (Multi-select)
+      if (selectedPartNames.length > 0) {
+        const itemPart = (item.partName || '').trim().toLowerCase();
+        if (!selectedPartNames.some((n) => n.trim().toLowerCase() === itemPart)) {
           return false;
         }
       }
 
-      // 2. Kod mosligi
-      if (selectedCode !== 'ALL') {
-        if ((item.code || '').trim().toLowerCase() !== selectedCode.trim().toLowerCase()) {
+      // 2. Kod mosligi (Multi-select)
+      if (selectedCodes.length > 0) {
+        const itemCode = (item.code || '').trim().toLowerCase();
+        if (!selectedCodes.some((c) => c.trim().toLowerCase() === itemCode)) {
           return false;
         }
       }
 
-      // 3. API mosligi
-      if (selectedApi !== 'ALL') {
-        if ((item.api || '').trim().toLowerCase() !== selectedApi.trim().toLowerCase()) {
+      // 3. API mosligi (Multi-select)
+      if (selectedApis.length > 0) {
+        const itemApi = (item.api || '').trim().toLowerCase();
+        if (!selectedApis.some((a) => a.trim().toLowerCase() === itemApi)) {
           return false;
         }
       }
 
-      // 4. Litr mosligi
-      if (selectedLiters !== 'ALL') {
-        if ((item.liters || '').trim().toLowerCase() !== selectedLiters.trim().toLowerCase()) {
+      // 4. Litr mosligi (Multi-select)
+      if (selectedLiters.length > 0) {
+        const itemLit = (item.liters || '').trim().toLowerCase();
+        if (!selectedLiters.some((l) => l.trim().toLowerCase() === itemLit)) {
           return false;
         }
       }
 
-      // 5. Davlat mosligi
-      if (selectedCountry !== 'ALL') {
-        if ((item.country || '').trim().toLowerCase() !== selectedCountry.trim().toLowerCase()) {
+      // 5. Davlat mosligi (Multi-select)
+      if (selectedCountries.length > 0) {
+        const itemCountry = (item.country || '').trim().toLowerCase();
+        if (!selectedCountries.some((cnt) => cnt.trim().toLowerCase() === itemCountry)) {
           return false;
         }
       }
 
-      // 6. Brend mosligi
-      if (selectedBrand !== 'ALL') {
-        if (item.brand?.trim().toLowerCase() !== selectedBrand.trim().toLowerCase()) {
+      // 6. Brend mosligi (Multi-select)
+      if (selectedBrands.length > 0) {
+        const itemBrand = (item.brand || '').trim().toLowerCase();
+        if (!selectedBrands.some((b) => b.trim().toLowerCase() === itemBrand)) {
           return false;
         }
       }
@@ -291,13 +299,12 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
     });
   }, [
     parts,
-    activePartName,
-    selectedPartName,
-    selectedCode,
-    selectedApi,
+    selectedPartNames,
+    selectedCodes,
+    selectedApis,
     selectedLiters,
-    selectedCountry,
-    selectedBrand,
+    selectedCountries,
+    selectedBrands,
     startDate,
     endDate,
   ]);
@@ -581,7 +588,10 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Narxlar tahlili');
 
-    const prefix = activePartName === 'ALL' ? 'Barcha_Moylar' : activePartName.replace(/\s+/g, '_');
+    const prefix =
+      selectedPartNames.length === 0
+        ? 'Barcha_Moylar'
+        : selectedPartNames.join('_').replace(/\s+/g, '_').slice(0, 30);
     const fileName = `Daewoo_Tahlil_${prefix}_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
@@ -751,12 +761,23 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
           {/* 2-QADAM: AVTO MOY NOMI */}
           <div className="bg-yellow-50/70 border border-amber-300 p-2 sm:p-2.5 flex flex-col justify-between space-y-2">
             <div>
-              <div className="flex items-center gap-1 text-black font-black text-[11px] sm:text-xs uppercase mb-1">
-                <Wrench className="w-3.5 h-3.5 text-amber-700 stroke-[2.5]" />
-                <span>2-Qadam: Avto moy nomi</span>
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <div className="flex items-center gap-1 text-black font-black text-[11px] sm:text-xs uppercase">
+                  <Wrench className="w-3.5 h-3.5 text-amber-700 stroke-[2.5]" />
+                  <span>2-Qadam: Avto moy nomi</span>
+                </div>
+                {selectedPartNames.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedPartNames([])}
+                    className="text-[10px] font-bold text-amber-800 hover:text-red-700 underline cursor-pointer"
+                  >
+                    Barchasi
+                  </button>
+                )}
               </div>
               <p className="text-[10px] text-stone-600 font-bold">
-                Mavjud unikal avto moylardan tanlang:
+                Mavjud unikal moylardan bir yoki bir nechtasini tanlang:
               </p>
             </div>
 
@@ -766,90 +787,130 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                   Bazaga hali avto moy kiritilmagan
                 </div>
               ) : (
-                <select
-                  value={activePartName}
-                  onChange={(e) => {
-                    setSelectedPartName(e.target.value);
-                    setSelectedBrand('ALL');
-                    setSelectedCode('ALL');
-                    setSelectedApi('ALL');
-                    setSelectedLiters('ALL');
-                    setSelectedCountry('ALL');
-                  }}
-                  className="w-full px-2 py-1.5 text-xs border-2 border-amber-400 bg-white font-black text-black focus:outline-none rounded-none truncate"
-                >
-                  <option value="ALL">-- Barcha avto moylar ({uniquePartNames.length} xil) --</option>
-                  {uniquePartNames.map((item) => (
-                    <option key={item.name} value={item.name}>
-                      {item.name} ({item.count} ta qayd)
-                    </option>
-                  ))}
-                </select>
+                <MultiSelectDropdown
+                  label="Avto moy"
+                  allLabel="Barcha avto moylar"
+                  options={uniquePartNames.map((item) => ({
+                    value: item.name,
+                    label: item.name,
+                    count: item.count,
+                  }))}
+                  selectedValues={selectedPartNames}
+                  onChange={setSelectedPartNames}
+                />
               )}
             </div>
 
-            <div className="text-[10px] sm:text-[11px] font-bold text-stone-700 flex items-center justify-between border-t border-amber-200 pt-1">
-              <span>Tanlangan:</span>
-              <span className="font-black text-black truncate max-w-[170px]">
-                {activePartName === 'ALL' ? 'Barcha avto moylar' : activePartName || 'Tanlanmagan'}
-              </span>
+            <div className="flex items-center gap-1 flex-wrap border-t border-amber-200 pt-1 overflow-x-auto max-h-16">
+              <button
+                type="button"
+                onClick={() => setSelectedPartNames([])}
+                className={`px-1.5 py-0.5 text-[10px] font-black border transition cursor-pointer ${
+                  selectedPartNames.length === 0
+                    ? 'bg-amber-400 border-amber-600 text-black'
+                    : 'bg-white hover:bg-yellow-200 border-amber-300 text-stone-700'
+                }`}
+              >
+                Barchasi ({uniquePartNames.length})
+              </button>
+              {uniquePartNames.slice(0, 5).map((p) => {
+                const isSelected = selectedPartNames.includes(p.name);
+                return (
+                  <button
+                    key={p.name}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedPartNames(selectedPartNames.filter((x) => x !== p.name));
+                      } else {
+                        setSelectedPartNames([...selectedPartNames, p.name]);
+                      }
+                    }}
+                    className={`px-1.5 py-0.5 text-[10px] font-black border transition cursor-pointer truncate max-w-[120px] ${
+                      isSelected
+                        ? 'bg-amber-400 border-amber-600 text-black'
+                        : 'bg-white hover:bg-yellow-200 border-amber-300 text-stone-700'
+                    }`}
+                    title={p.name}
+                  >
+                    {p.name}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
           {/* 3-QADAM: BREND TANLASH */}
           <div className="bg-yellow-50/70 border border-amber-300 p-2 sm:p-2.5 flex flex-col justify-between space-y-2">
             <div>
-              <div className="flex items-center gap-1 text-black font-black text-[11px] sm:text-xs uppercase mb-1">
-                <Tag className="w-3.5 h-3.5 text-amber-700 stroke-[2.5]" />
-                <span>3-Qadam: Brend tanlash</span>
+              <div className="flex items-center justify-between gap-1 mb-1">
+                <div className="flex items-center gap-1 text-black font-black text-[11px] sm:text-xs uppercase">
+                  <Tag className="w-3.5 h-3.5 text-amber-700 stroke-[2.5]" />
+                  <span>3-Qadam: Brend tanlash</span>
+                </div>
+                {selectedBrands.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedBrands([])}
+                    className="text-[10px] font-bold text-amber-800 hover:text-red-700 underline cursor-pointer"
+                  >
+                    Barchasi
+                  </button>
+                )}
               </div>
               <p className="text-[10px] text-stone-600 font-bold">
-                «{activePartName === 'ALL' ? 'Barcha moylar' : activePartName || 'Mahsulot'}» uchun brend:
+                Mavjud brendlardan bir yoki bir nechtasini tanlang:
               </p>
             </div>
 
             <div>
-              <select
-                value={selectedBrand}
-                onChange={(e) => setSelectedBrand(e.target.value)}
-                disabled={availableBrands.length === 0}
-                className="w-full px-2 py-1.5 text-xs border-2 border-amber-400 bg-white font-black text-black focus:outline-none rounded-none disabled:bg-stone-100 disabled:text-stone-400 truncate"
-              >
-                <option value="ALL">-- Barcha brendlar ({availableBrands.length} ta) --</option>
-                {availableBrands.map((b) => (
-                  <option key={b} value={b}>
-                    {b}
-                  </option>
-                ))}
-              </select>
+              <MultiSelectDropdown
+                label="Brend"
+                allLabel="Barcha brendlar"
+                options={availableBrands.map((b) => ({
+                  value: b,
+                  label: b,
+                }))}
+                selectedValues={selectedBrands}
+                onChange={setSelectedBrands}
+              />
             </div>
 
-            <div className="flex items-center gap-1 flex-wrap border-t border-amber-200 pt-1 overflow-x-auto max-h-12">
+            <div className="flex items-center gap-1 flex-wrap border-t border-amber-200 pt-1 overflow-x-auto max-h-16">
               <button
                 type="button"
-                onClick={() => setSelectedBrand('ALL')}
+                onClick={() => setSelectedBrands([])}
                 className={`px-1.5 py-0.5 text-[10px] font-black border transition cursor-pointer ${
-                  selectedBrand === 'ALL'
+                  selectedBrands.length === 0
                     ? 'bg-amber-400 border-amber-600 text-black'
                     : 'bg-white hover:bg-yellow-200 border-amber-300 text-stone-700'
                 }`}
               >
                 Barchasi
               </button>
-              {availableBrands.map((b) => (
-                <button
-                  key={b}
-                  type="button"
-                  onClick={() => setSelectedBrand(b)}
-                  className={`px-1.5 py-0.5 text-[10px] font-black border transition cursor-pointer ${
-                    selectedBrand === b
-                      ? 'bg-amber-400 border-amber-600 text-black'
-                      : 'bg-white hover:bg-yellow-200 border-amber-300 text-stone-700'
-                  }`}
-                >
-                  {b}
-                </button>
-              ))}
+              {availableBrands.map((b) => {
+                const isSelected = selectedBrands.includes(b);
+                return (
+                  <button
+                    key={b}
+                    type="button"
+                    onClick={() => {
+                      if (isSelected) {
+                        setSelectedBrands(selectedBrands.filter((x) => x !== b));
+                      } else {
+                        setSelectedBrands([...selectedBrands, b]);
+                      }
+                    }}
+                    className={`px-1.5 py-0.5 text-[10px] font-black border transition cursor-pointer ${
+                      isSelected
+                        ? 'bg-amber-400 border-amber-600 text-black'
+                        : 'bg-white hover:bg-yellow-200 border-amber-300 text-stone-700'
+                    }`}
+                  >
+                    {b}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -859,7 +920,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
             <div className="flex items-center gap-1.5 text-xs font-black uppercase text-black">
               <Layers className="w-3.5 h-3.5 text-amber-700 stroke-[2.5]" />
-              <span>Qo'shimcha filtrlar (Kod, API, Litr, Davlat):</span>
+              <span>Qo'shimcha filtrlar (Kod, API, Litr, Davlat — ko'p tanlovli):</span>
               {isAdditionalFilterActive && (
                 <span className="px-1.5 py-0.5 bg-amber-400 border border-amber-600 text-[10px] font-black uppercase">
                   Filtr faol
@@ -884,18 +945,18 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                 <span className="text-[10px] uppercase font-black text-stone-700">Kod:</span>
                 <span className="text-[9px] font-mono font-bold text-stone-500">{availableCodes.length} xil</span>
               </div>
-              <select
-                value={selectedCode}
-                onChange={(e) => setSelectedCode(e.target.value)}
-                className="w-full px-2 py-1 text-xs border border-amber-400 bg-white font-bold text-black focus:outline-none rounded-none truncate"
-              >
-                <option value="ALL">-- Barcha kodlar --</option>
-                {availableCodes.map((c) => (
-                  <option key={c.code} value={c.code}>
-                    {c.code} ({c.count})
-                  </option>
-                ))}
-              </select>
+              <MultiSelectDropdown
+                label="Kod"
+                allLabel="Barcha kodlar"
+                options={availableCodes.map((c) => ({
+                  value: c.code,
+                  label: c.code,
+                  count: c.count,
+                }))}
+                selectedValues={selectedCodes}
+                onChange={setSelectedCodes}
+                mono={true}
+              />
             </div>
 
             {/* API BO'YICHA */}
@@ -904,18 +965,18 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                 <span className="text-[10px] uppercase font-black text-stone-700">API:</span>
                 <span className="text-[9px] font-mono font-bold text-stone-500">{availableApis.length} xil</span>
               </div>
-              <select
-                value={selectedApi}
-                onChange={(e) => setSelectedApi(e.target.value)}
-                className="w-full px-2 py-1 text-xs border border-amber-400 bg-white font-bold text-black focus:outline-none rounded-none truncate"
-              >
-                <option value="ALL">-- Barcha APIlar --</option>
-                {availableApis.map((a) => (
-                  <option key={a.api} value={a.api}>
-                    {a.api} ({a.count})
-                  </option>
-                ))}
-              </select>
+              <MultiSelectDropdown
+                label="API"
+                allLabel="Barcha APIlar"
+                options={availableApis.map((a) => ({
+                  value: a.api,
+                  label: a.api,
+                  count: a.count,
+                }))}
+                selectedValues={selectedApis}
+                onChange={setSelectedApis}
+                mono={true}
+              />
             </div>
 
             {/* LITR BO'YICHA */}
@@ -924,18 +985,17 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                 <span className="text-[10px] uppercase font-black text-stone-700">Litr:</span>
                 <span className="text-[9px] font-mono font-bold text-stone-500">{availableLiters.length} xil</span>
               </div>
-              <select
-                value={selectedLiters}
-                onChange={(e) => setSelectedLiters(e.target.value)}
-                className="w-full px-2 py-1 text-xs border border-amber-400 bg-white font-bold text-black focus:outline-none rounded-none truncate"
-              >
-                <option value="ALL">-- Barcha litrlar --</option>
-                {availableLiters.map((l) => (
-                  <option key={l.liters} value={l.liters}>
-                    {l.liters} ({l.count})
-                  </option>
-                ))}
-              </select>
+              <MultiSelectDropdown
+                label="Litr"
+                allLabel="Barcha litrlar"
+                options={availableLiters.map((l) => ({
+                  value: l.liters,
+                  label: `${l.liters} L`,
+                  count: l.count,
+                }))}
+                selectedValues={selectedLiters}
+                onChange={setSelectedLiters}
+              />
             </div>
 
             {/* DAVLAT BO'YICHA */}
@@ -944,18 +1004,17 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                 <span className="text-[10px] uppercase font-black text-stone-700">Davlat:</span>
                 <span className="text-[9px] font-mono font-bold text-stone-500">{availableCountries.length} xil</span>
               </div>
-              <select
-                value={selectedCountry}
-                onChange={(e) => setSelectedCountry(e.target.value)}
-                className="w-full px-2 py-1 text-xs border border-amber-400 bg-white font-bold text-black focus:outline-none rounded-none truncate"
-              >
-                <option value="ALL">-- Barcha davlatlar --</option>
-                {availableCountries.map((d) => (
-                  <option key={d.country} value={d.country}>
-                    {d.country} ({d.count})
-                  </option>
-                ))}
-              </select>
+              <MultiSelectDropdown
+                label="Davlat"
+                allLabel="Barcha davlatlar"
+                options={availableCountries.map((d) => ({
+                  value: d.country,
+                  label: d.country,
+                  count: d.count,
+                }))}
+                selectedValues={selectedCountries}
+                onChange={setSelectedCountries}
+              />
             </div>
           </div>
         </div>
@@ -965,7 +1024,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
       {/* 3 TA QADAMNING PASTIDA: BUGUNGI KUNGA ENG ARZONINI KO'RSATISH VA BIR NECHTA
           YETKAZIB BERUVCHIDA BIR XIL BO'LSA, HAR BIRINI TAHLILIY KO'RSATISH */}
       {/* ========================================================================= */}
-      {activePartName && cheapestSuppliersList.length > 0 && (
+      {cheapestSuppliersList.length > 0 && (
         <div className="bg-gradient-to-r from-emerald-50 via-yellow-50 to-emerald-50 border-2 border-emerald-600 p-3 sm:p-4 shadow-sm space-y-3">
           {/* Header xabari */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 border-b-2 border-emerald-300 pb-2.5">
@@ -989,12 +1048,12 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                   )}
                 </div>
                 <p className="text-[11px] font-bold text-stone-700">
-                  Mahsulot: <span className="text-black font-black font-heading">{activePartName === 'ALL' ? 'Barcha avto moylar' : activePartName}</span>{' '}
-                  {selectedBrand !== 'ALL' && <span className="text-amber-800">({selectedBrand})</span>}
-                  {selectedCode !== 'ALL' && <span className="text-sky-800 ml-1.5">[Kod: {selectedCode}]</span>}
-                  {selectedApi !== 'ALL' && <span className="text-purple-800 ml-1.5">[API: {selectedApi}]</span>}
-                  {selectedLiters !== 'ALL' && <span className="text-amber-800 ml-1.5">[{selectedLiters}L]</span>}
-                  {selectedCountry !== 'ALL' && <span className="text-stone-800 ml-1.5">[{selectedCountry}]</span>}
+                  Mahsulot: <span className="text-black font-black font-heading">{activePartNameDisplay}</span>{' '}
+                  {selectedBrands.length > 0 && <span className="text-amber-800">({selectedBrands.join(', ')})</span>}
+                  {selectedCodes.length > 0 && <span className="text-sky-800 ml-1.5">[Kod: {selectedCodes.join(', ')}]</span>}
+                  {selectedApis.length > 0 && <span className="text-purple-800 ml-1.5">[API: {selectedApis.join(', ')}]</span>}
+                  {selectedLiters.length > 0 && <span className="text-amber-800 ml-1.5">[{selectedLiters.map((l) => `${l}L`).join(', ')}]</span>}
+                  {selectedCountries.length > 0 && <span className="text-stone-800 ml-1.5">[{selectedCountries.join(', ')}]</span>}
                 </p>
               </div>
             </div>
@@ -1057,7 +1116,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                           Faoliyat: {supplierProfile.activityType}
                         </span>
                       )}
-                      {activePartName === 'ALL' && quoteItem.partName && (
+                      {quoteItem.partName && (
                         <span className="px-1.5 py-0.5 bg-yellow-100 border border-amber-400 font-black text-black">
                           {quoteItem.partName}
                         </span>
@@ -1303,7 +1362,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                     Tahliliy chizmalar
                   </span>
                   <h2 className="font-black text-xs sm:text-sm md:text-base uppercase tracking-wider text-black font-heading truncate">
-                    {activePartName} — Narxlar Tahliliy Chizmalari
+                    {activePartNameDisplay} — Narxlar Tahliliy Chizmalari
                   </h2>
                 </div>
                 <p className="text-[10px] sm:text-[11px] text-stone-700 font-bold mt-0.5">
@@ -1602,7 +1661,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                     <th className="p-1.5 border-r border-amber-300 text-center w-8">№</th>
                     <th className="p-1.5 border-r border-amber-300 w-24 text-center">Sana</th>
                     <th className="p-1.5 border-r border-amber-300 w-20">Vaqt</th>
-                    {activePartName === 'ALL' && (
+                    {selectedPartNames.length !== 1 && (
                       <th className="p-1.5 border-r border-amber-300 w-28">Avto moy</th>
                     )}
                     <th className="p-1.5 border-r border-amber-300 w-20">Kod</th>
@@ -1625,7 +1684,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                       <td className="p-1.5 border-r border-amber-200 text-center font-mono font-black">{idx + 1}</td>
                       <td className="p-1.5 border-r border-amber-200 text-center font-mono font-bold text-black whitespace-nowrap">{item.date}</td>
                       <td className="p-1.5 border-r border-amber-200 font-mono text-[9px] sm:text-[10px] text-stone-600 whitespace-nowrap">{item.systemTime}</td>
-                      {activePartName === 'ALL' && (
+                      {selectedPartNames.length !== 1 && (
                         <td className="p-1.5 border-r border-amber-200 font-bold text-black truncate max-w-[120px]" title={item.partName}>
                           {item.partName}
                         </td>
@@ -1663,7 +1722,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                     Narx O'zgarishi Foiz Xronologiyasi
                   </h3>
                   <p className="text-[10px] sm:text-[11px] text-stone-600 font-bold">
-                    «{activePartName}» mahsulotining har bir qayd bo'yicha narx o'sishi / pasayishi dinamikasi
+                    «{activePartNameDisplay}» mahsulotining har bir qayd bo'yicha narx o'sishi / pasayishi dinamikasi
                   </p>
                 </div>
               </div>
