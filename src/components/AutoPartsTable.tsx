@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Wrench,
   Plus,
@@ -14,6 +14,10 @@ import {
   Table as TableIcon,
   Clock,
   Info,
+  Filter,
+  RotateCcw,
+  Search,
+  X,
 } from 'lucide-react';
 import { AutoPart } from '../types';
 import { exportAutoPartsToExcel } from '../utils/excelExport';
@@ -38,8 +42,216 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
   // Mobilda ko'rinish rejimi: 'cards' (ixcham kartalar) yoki 'table' (gorizontal suriladigan jadval)
   const [mobileViewMode, setMobileViewMode] = useState<'cards' | 'table'>('cards');
 
+  // Filtr holatlari: moy nomi, kod, api, litr, davlat, brend, yetkazib beruvchi, narx, sana, manbaa
+  const [filterPartName, setFilterPartName] = useState<string>('');
+  const [filterCode, setFilterCode] = useState<string>('');
+  const [filterApi, setFilterApi] = useState<string>('');
+  const [filterLiters, setFilterLiters] = useState<string>('');
+  const [filterCountry, setFilterCountry] = useState<string>('');
+  const [filterBrand, setFilterBrand] = useState<string>('');
+  const [filterSupplier, setFilterSupplier] = useState<string>('');
+  const [filterMinPrice, setFilterMinPrice] = useState<string>('');
+  const [filterMaxPrice, setFilterMaxPrice] = useState<string>('');
+  const [filterStartDate, setFilterStartDate] = useState<string>('');
+  const [filterEndDate, setFilterEndDate] = useState<string>('');
+  const [filterSource, setFilterSource] = useState<string>('');
+
+  // 1. Bazadagi unikal moy nomlari
+  const uniquePartNames = useMemo(() => {
+    const map = new Map<string, number>();
+    parts.forEach((p) => {
+      const name = p.partName?.trim();
+      if (name) map.set(name, (map.get(name) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [parts]);
+
+  // Bazadagi unikal kodlar
+  const uniqueCodes = useMemo(() => {
+    const map = new Map<string, number>();
+    parts.forEach((p) => {
+      const code = p.code?.trim();
+      if (code) map.set(code, (map.get(code) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([code, count]) => ({ code, count }))
+      .sort((a, b) => a.code.localeCompare(b.code));
+  }, [parts]);
+
+  // Bazadagi unikal API'lar
+  const uniqueApis = useMemo(() => {
+    const map = new Map<string, number>();
+    parts.forEach((p) => {
+      const api = p.api?.trim();
+      if (api) map.set(api, (map.get(api) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([api, count]) => ({ api, count }))
+      .sort((a, b) => a.api.localeCompare(b.api));
+  }, [parts]);
+
+  // Bazadagi unikal litrlar
+  const uniqueLiters = useMemo(() => {
+    const map = new Map<string, number>();
+    parts.forEach((p) => {
+      const lit = p.liters?.trim();
+      if (lit) map.set(lit, (map.get(lit) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([liters, count]) => ({ liters, count }))
+      .sort((a, b) => a.liters.localeCompare(b.liters));
+  }, [parts]);
+
+  // Bazadagi unikal davlatlar
+  const uniqueCountries = useMemo(() => {
+    const map = new Map<string, number>();
+    parts.forEach((p) => {
+      const c = p.country?.trim();
+      if (c) map.set(c, (map.get(c) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([country, count]) => ({ country, count }))
+      .sort((a, b) => a.country.localeCompare(b.country));
+  }, [parts]);
+
+  // 2. Bazadagi unikal brendlar
+  const uniqueBrands = useMemo(() => {
+    const map = new Map<string, number>();
+    parts.forEach((p) => {
+      const brand = p.brand?.trim();
+      if (brand) map.set(brand, (map.get(brand) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([brand, count]) => ({ brand, count }))
+      .sort((a, b) => a.brand.localeCompare(b.brand));
+  }, [parts]);
+
+  // 3. Bazadagi unikal yetkazib beruvchilar
+  const uniqueSuppliers = useMemo(() => {
+    const map = new Map<string, number>();
+    parts.forEach((p) => {
+      const sup = p.supplierName?.trim();
+      if (sup) map.set(sup, (map.get(sup) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([supplier, count]) => ({ supplier, count }))
+      .sort((a, b) => a.supplier.localeCompare(b.supplier));
+  }, [parts]);
+
+  // 4. Bazadagi unikal manbalar
+  const uniqueSources = useMemo(() => {
+    const map = new Map<string, number>();
+    parts.forEach((p) => {
+      const src = p.source?.trim();
+      if (src) map.set(src, (map.get(src) || 0) + 1);
+    });
+    return Array.from(map.entries())
+      .map(([source, count]) => ({ source, count }))
+      .sort((a, b) => a.source.localeCompare(b.source));
+  }, [parts]);
+
+  // Filtr faolligini tekshirish
+  const isFilterActive = Boolean(
+    filterPartName ||
+    filterCode ||
+    filterApi ||
+    filterLiters ||
+    filterCountry ||
+    filterBrand ||
+    filterSupplier ||
+    filterMinPrice !== '' ||
+    filterMaxPrice !== '' ||
+    filterStartDate ||
+    filterEndDate ||
+    filterSource
+  );
+
+  const handleResetFilters = () => {
+    setFilterPartName('');
+    setFilterCode('');
+    setFilterApi('');
+    setFilterLiters('');
+    setFilterCountry('');
+    setFilterBrand('');
+    setFilterSupplier('');
+    setFilterMinPrice('');
+    setFilterMaxPrice('');
+    setFilterStartDate('');
+    setFilterEndDate('');
+    setFilterSource('');
+  };
+
+  // Tanlangan filtrlar bo'yicha saralangan / elangan avto moylar ro'yxati
+  const filteredParts = useMemo(() => {
+    return parts.filter((item) => {
+      // Moy nomi bo'yicha filtr
+      if (filterPartName && item.partName !== filterPartName) {
+        return false;
+      }
+      // Kod bo'yicha filtr
+      if (filterCode && (item.code || '') !== filterCode) {
+        return false;
+      }
+      // API bo'yicha filtr
+      if (filterApi && (item.api || '') !== filterApi) {
+        return false;
+      }
+      // Litr bo'yicha filtr
+      if (filterLiters && (item.liters || '') !== filterLiters) {
+        return false;
+      }
+      // Davlat bo'yicha filtr
+      if (filterCountry && (item.country || '') !== filterCountry) {
+        return false;
+      }
+      // Brend bo'yicha filtr
+      if (filterBrand && item.brand !== filterBrand) {
+        return false;
+      }
+      // Yetkazib beruvchi bo'yicha filtr
+      if (filterSupplier && item.supplierName !== filterSupplier) {
+        return false;
+      }
+      // Narx bo'yicha filtr (min va max oralig'i)
+      if (filterMinPrice !== '' && !isNaN(Number(filterMinPrice))) {
+        if ((item.price || 0) < Number(filterMinPrice)) return false;
+      }
+      if (filterMaxPrice !== '' && !isNaN(Number(filterMaxPrice))) {
+        if ((item.price || 0) > Number(filterMaxPrice)) return false;
+      }
+      // Sana bo'yicha filtr (boshlanish va tugash sanasi)
+      if (filterStartDate && item.date < filterStartDate) {
+        return false;
+      }
+      if (filterEndDate && item.date > filterEndDate) {
+        return false;
+      }
+      // Manbaa bo'yicha filtr
+      if (filterSource && item.source !== filterSource) {
+        return false;
+      }
+      return true;
+    });
+  }, [
+    parts,
+    filterPartName,
+    filterCode,
+    filterApi,
+    filterLiters,
+    filterCountry,
+    filterBrand,
+    filterSupplier,
+    filterMinPrice,
+    filterMaxPrice,
+    filterStartDate,
+    filterEndDate,
+    filterSource,
+  ]);
+
   const handleExport = () => {
-    exportAutoPartsToExcel(parts);
+    exportAutoPartsToExcel(filteredParts);
   };
 
   const confirmDelete = (id: string) => {
@@ -57,16 +269,12 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
     }
   };
 
-  // Hisoblangan umumiy statistika
-  const totalItems = parts.length;
-  const totalPrice = parts.reduce((acc, curr) => acc + (curr.price || 0), 0);
-
   return (
     <div id="autoparts-container" className="w-full space-y-3">
       {/* Top action toolbar */}
       <div className="bg-yellow-100/95 border-2 border-amber-400 p-3 sm:p-4 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 text-black rounded-none">
         
-        {/* Title & Count */}
+        {/* Title & Count (Jami qiymat o'chirildi) */}
         <div className="flex items-center gap-2.5 sm:gap-3">
           <div className="p-2 bg-amber-400 border border-amber-600 text-black shrink-0">
             <Wrench className="w-5 h-5 stroke-[2.5]" />
@@ -74,15 +282,14 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-base sm:text-lg font-black uppercase tracking-wider text-black font-heading truncate">
-                Avto Ehtiyot Qismlar
+                Avto Moylar
               </h1>
               <span className="px-2 py-0.5 bg-amber-300 border border-amber-500 text-xs font-black shrink-0">
-                {totalItems} ta yozuv
+                {isFilterActive
+                  ? `${filteredParts.length} / ${parts.length} ta yozuv`
+                  : `${parts.length} ta yozuv`}
               </span>
             </div>
-            <p className="text-[11px] font-bold text-stone-700">
-              Jami qiymat: <span className="text-black font-black">{formatUSD(totalPrice)} USD</span>
-            </p>
           </div>
         </div>
 
@@ -93,10 +300,10 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
             type="button"
             onClick={handleExport}
             className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 px-3 py-2 bg-amber-200 hover:bg-amber-300 border-2 border-amber-500 text-black text-xs font-black transition cursor-pointer active:scale-95 shadow-2xs rounded-none"
-            title="Avto ehtiyot qismlar jadvalini Excel (.xlsx) formatida yuklab olish"
+            title="Avto moylar jadvalini Excel (.xlsx) formatida yuklab olish"
           >
             <FileSpreadsheet className="w-4 h-4 text-emerald-800 stroke-[2.5]" />
-            <span>Excel (.xlsx)</span>
+            <span>Excel {isFilterActive ? `(${filteredParts.length})` : '(.xlsx)'}</span>
           </button>
 
           {/* Add Part (Disabled when offline) */}
@@ -112,7 +319,7 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
             title={
               !isOnline
                 ? 'Oflayn rejim: Baza faqat ko\'rish uchun ochiq, yangi yozuv qo\'shib bo\'lmaydi'
-                : 'Yangi avto ehtiyot qism qo\'shish'
+                : 'Yangi avto moy qo\'shish'
             }
           >
             {!isOnline ? (
@@ -121,10 +328,369 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
               <Plus className="w-4 h-4 stroke-[3]" />
             )}
             <span>
-              {!isOnline ? 'Oflayn' : '+ Yangi ehtiyot qism'}
+              {!isOnline ? 'Oflayn' : '+ Yangi avto moy'}
             </span>
           </button>
         </div>
+      </div>
+
+      {/* 2-Jadval Filtr Paneli */}
+      <div className="bg-yellow-50/90 border-2 border-amber-400 p-3 sm:p-3.5 shadow-sm space-y-2.5 text-black">
+        {/* Filtr panel bosh qismi */}
+        <div className="flex items-center justify-between gap-2 flex-wrap pb-2 border-b border-amber-300">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1 bg-amber-400 border border-amber-600 text-black shrink-0">
+              <Filter className="w-3.5 h-3.5 stroke-[2.5]" />
+            </div>
+            <span className="font-black text-xs uppercase tracking-wider text-black">
+              Filtrlar (Moy nomi, Kod, API, Litr, Davlat, Brend, Yetkazib beruvchi, Narx, Sana, Manbaa)
+            </span>
+            {isFilterActive && (
+              <span className="px-1.5 py-0.5 bg-amber-300 border border-amber-600 text-[10px] font-black text-black">
+                {filteredParts.length} ta natija
+              </span>
+            )}
+          </div>
+
+          {isFilterActive && (
+            <button
+              type="button"
+              onClick={handleResetFilters}
+              className="flex items-center gap-1 px-2.5 py-1 bg-white hover:bg-amber-200 border-2 border-amber-500 text-black text-[11px] font-black transition cursor-pointer active:scale-95 shadow-2xs"
+            >
+              <RotateCcw className="w-3 h-3 text-amber-900" />
+              <span>Barcha filtrlarni tozalash</span>
+            </button>
+          )}
+        </div>
+
+        {/* Filtr ustunlari */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-2.5">
+          {/* 1. Moy nomi */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
+              Moy nomi:
+            </label>
+            <select
+              value={filterPartName}
+              onChange={(e) => setFilterPartName(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
+            >
+              <option value="">Barchasi ({uniquePartNames.length})</option>
+              {uniquePartNames.map((item) => (
+                <option key={item.name} value={item.name}>
+                  {item.name} ({item.count})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 2. Kod */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
+              Kod:
+            </label>
+            <select
+              value={filterCode}
+              onChange={(e) => setFilterCode(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs font-mono font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
+            >
+              <option value="">Barchasi ({uniqueCodes.length})</option>
+              {uniqueCodes.map((item) => (
+                <option key={item.code} value={item.code}>
+                  {item.code} ({item.count})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 3. API */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
+              API:
+            </label>
+            <select
+              value={filterApi}
+              onChange={(e) => setFilterApi(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
+            >
+              <option value="">Barchasi ({uniqueApis.length})</option>
+              {uniqueApis.map((item) => (
+                <option key={item.api} value={item.api}>
+                  {item.api} ({item.count})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 4. Litr */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
+              Litr:
+            </label>
+            <select
+              value={filterLiters}
+              onChange={(e) => setFilterLiters(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
+            >
+              <option value="">Barchasi ({uniqueLiters.length})</option>
+              {uniqueLiters.map((item) => (
+                <option key={item.liters} value={item.liters}>
+                  {item.liters} ({item.count})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 5. Ishlab chiqarilgan davlat */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
+              Davlat:
+            </label>
+            <select
+              value={filterCountry}
+              onChange={(e) => setFilterCountry(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
+            >
+              <option value="">Barchasi ({uniqueCountries.length})</option>
+              {uniqueCountries.map((item) => (
+                <option key={item.country} value={item.country}>
+                  {item.country} ({item.count})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 6. Brend */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
+              Brend:
+            </label>
+            <select
+              value={filterBrand}
+              onChange={(e) => setFilterBrand(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
+            >
+              <option value="">Barchasi ({uniqueBrands.length})</option>
+              {uniqueBrands.map((item) => (
+                <option key={item.brand} value={item.brand}>
+                  {item.brand} ({item.count})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 7. Yetkazib beruvchi */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
+              Yetkazib beruvchi:
+            </label>
+            <select
+              value={filterSupplier}
+              onChange={(e) => setFilterSupplier(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
+            >
+              <option value="">Barchasi ({uniqueSuppliers.length})</option>
+              {uniqueSuppliers.map((item) => (
+                <option key={item.supplier} value={item.supplier}>
+                  {item.supplier} ({item.count})
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* 8. Narx ($ / USD) */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
+              Narx ($):
+            </label>
+            <div className="grid grid-cols-2 gap-1">
+              <input
+                type="number"
+                value={filterMinPrice}
+                onChange={(e) => setFilterMinPrice(e.target.value)}
+                placeholder="Min $"
+                className="w-full px-1.5 py-1 text-xs font-mono font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none"
+              />
+              <input
+                type="number"
+                value={filterMaxPrice}
+                onChange={(e) => setFilterMaxPrice(e.target.value)}
+                placeholder="Max $"
+                className="w-full px-1.5 py-1 text-xs font-mono font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none"
+              />
+            </div>
+          </div>
+
+          {/* 9. Sana oralig'i */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
+              Sana oralig'i:
+            </label>
+            <div className="grid grid-cols-2 gap-1">
+              <input
+                type="date"
+                value={filterStartDate}
+                onChange={(e) => setFilterStartDate(e.target.value)}
+                className="w-full px-1 py-1 text-[10px] font-mono font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none"
+                title="Boshlanish sanasi (Dan)"
+              />
+              <input
+                type="date"
+                value={filterEndDate}
+                onChange={(e) => setFilterEndDate(e.target.value)}
+                className="w-full px-1 py-1 text-[10px] font-mono font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none"
+                title="Tugash sanasi (Gacha)"
+              />
+            </div>
+          </div>
+
+          {/* 10. Manbaa */}
+          <div className="space-y-1">
+            <label className="text-[10px] font-black uppercase text-stone-700 block truncate">
+              Manbaa:
+            </label>
+            <select
+              value={filterSource}
+              onChange={(e) => setFilterSource(e.target.value)}
+              className="w-full px-2 py-1.5 text-xs font-bold border-2 border-amber-400 bg-white text-black focus:outline-none focus:border-amber-600 rounded-none cursor-pointer truncate"
+            >
+              <option value="">Barchasi ({uniqueSources.length})</option>
+              {uniqueSources.map((item) => (
+                <option key={item.source} value={item.source}>
+                  {item.source} ({item.count})
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Faol filtrlar teglari */}
+        {isFilterActive && (
+          <div className="flex items-center gap-1.5 flex-wrap pt-1.5 border-t border-amber-200 text-[11px]">
+            <span className="text-[10px] font-black uppercase text-stone-600">Faol:</span>
+            {filterPartName && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
+                Moy: <strong>{filterPartName}</strong>
+                <button
+                  type="button"
+                  onClick={() => setFilterPartName('')}
+                  className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {filterCode && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
+                Kod: <strong>{filterCode}</strong>
+                <button
+                  type="button"
+                  onClick={() => setFilterCode('')}
+                  className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {filterApi && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
+                API: <strong>{filterApi}</strong>
+                <button
+                  type="button"
+                  onClick={() => setFilterApi('')}
+                  className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {filterLiters && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
+                Litr: <strong>{filterLiters}</strong>
+                <button
+                  type="button"
+                  onClick={() => setFilterLiters('')}
+                  className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {filterCountry && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
+                Davlat: <strong>{filterCountry}</strong>
+                <button
+                  type="button"
+                  onClick={() => setFilterCountry('')}
+                  className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {filterBrand && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
+                Brend: <strong>{filterBrand}</strong>
+                <button
+                  type="button"
+                  onClick={() => setFilterBrand('')}
+                  className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {filterSupplier && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
+                Yetkazuvchi: <strong>{filterSupplier}</strong>
+                <button
+                  type="button"
+                  onClick={() => setFilterSupplier('')}
+                  className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {(filterMinPrice !== '' || filterMaxPrice !== '') && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
+                Narx: <strong>{filterMinPrice || '0'}$ - {filterMaxPrice || '∞'}$</strong>
+                <button
+                  type="button"
+                  onClick={() => { setFilterMinPrice(''); setFilterMaxPrice(''); }}
+                  className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {(filterStartDate || filterEndDate) && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
+                Sana: <strong>{filterStartDate || '...'} / {filterEndDate || '...'}</strong>
+                <button
+                  type="button"
+                  onClick={() => { setFilterStartDate(''); setFilterEndDate(''); }}
+                  className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+            {filterSource && (
+              <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-200 border border-amber-500 font-bold text-black">
+                Manba: <strong>{filterSource}</strong>
+                <button
+                  type="button"
+                  onClick={() => setFilterSource('')}
+                  className="hover:text-rose-700 ml-0.5 font-black cursor-pointer"
+                >
+                  ×
+                </button>
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Offline banner notification if disconnected */}
@@ -186,13 +752,26 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
             {parts.length === 0 ? (
               <div className="p-6 text-center bg-yellow-50/70 border-2 border-amber-300 text-black">
                 <Wrench className="w-7 h-7 text-amber-500 mx-auto mb-1.5 opacity-60" />
-                <p className="font-black text-sm text-stone-800">Hozircha ehtiyot qismlar yo'q</p>
+                <p className="font-black text-sm text-stone-800">Hozircha avto moylar yo'q</p>
                 <p className="text-xs text-stone-600 mt-1">
-                  Yangi qism qo'shish uchun "+ Yangi ehtiyot qism" tugmasini bosing
+                  Yangi avto moy qo'shish uchun "+ Yangi avto moy" tugmasini bosing
                 </p>
               </div>
+            ) : filteredParts.length === 0 ? (
+              <div className="p-6 text-center bg-yellow-50/70 border-2 border-amber-300 text-black space-y-2">
+                <Filter className="w-7 h-7 text-amber-600 mx-auto opacity-70" />
+                <p className="font-black text-sm text-stone-800">Belgilangan filtrlar bo'yicha avto moy topilmadi</p>
+                <p className="text-xs text-stone-600">Filtrlarni o'zgartiring yoki tozalang.</p>
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="px-3 py-1.5 bg-amber-300 hover:bg-amber-400 border-2 border-amber-500 text-black text-xs font-black transition cursor-pointer"
+                >
+                  Filtrlarni tozalash
+                </button>
+              </div>
             ) : (
-              parts.map((item, idx) => (
+              filteredParts.map((item, idx) => (
                 <div
                   key={item.id}
                   className="bg-white border-2 border-amber-400 p-3 shadow-xs space-y-2.5 text-black"
@@ -229,6 +808,26 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
 
                   {/* Detallar to'ri */}
                   <div className="grid grid-cols-1 gap-1.5 text-xs">
+                    {/* Yangi maydonlar: Kod, API, Litr, Davlat */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 bg-yellow-100/70 p-2 border border-amber-300 text-[11px]">
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-stone-500 block">Kod:</span>
+                        <span className="font-mono font-black text-black break-all">{item.code || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-stone-500 block">API:</span>
+                        <span className="font-bold text-stone-900 break-all">{item.api || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-stone-500 block">Litr:</span>
+                        <span className="font-black text-black">{item.liters || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-[9px] uppercase font-bold text-stone-500 block">Davlat:</span>
+                        <span className="font-bold text-stone-900">{item.country || '-'}</span>
+                      </div>
+                    </div>
+
                     {/* Yetkazib beruvchi */}
                     <div className="flex items-start gap-1.5 text-stone-800">
                       <Building2 className="w-3.5 h-3.5 text-amber-700 shrink-0 mt-0.5" />
@@ -307,30 +906,47 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
               ↔ Barcha ustunlarni ko'rish uchun jadvalni chapga/o'ngga suring (swipe)
             </p>
             <div className="border-2 border-amber-400 bg-white shadow-sm overflow-x-auto">
-              <table className="min-w-[850px] w-full border-collapse text-left text-xs">
+              <table className="min-w-[1100px] w-full border-collapse text-left text-xs">
                 <thead>
                   <tr className="bg-yellow-200 border-b-2 border-amber-400 text-black text-[10px] font-black uppercase">
-                    <th className="p-2 border-r border-amber-300 text-center w-10">№</th>
-                    <th className="p-2 border-r border-amber-300 w-28">Vaqt</th>
-                    <th className="p-2 border-r border-amber-300 w-36">Avto ehtiyot qism</th>
+                    <th className="p-2 border-r border-amber-300 w-10 text-center">№</th>
+                    <th className="p-2 border-r border-amber-300 w-24">Vaqt</th>
+                    <th className="p-2 border-r border-amber-300 w-36">Avto moy nomi</th>
+                    <th className="p-2 border-r border-amber-300 w-24">Kod</th>
+                    <th className="p-2 border-r border-amber-300 w-20">API</th>
+                    <th className="p-2 border-r border-amber-300 w-16">Litr</th>
+                    <th className="p-2 border-r border-amber-300 w-24">Davlat</th>
                     <th className="p-2 border-r border-amber-300 w-24">Brend</th>
-                    <th className="p-2 border-r border-amber-300 w-36">Yetkazib beruvchi</th>
-                    <th className="p-2 border-r border-amber-300 text-right w-28">Narx ($)</th>
+                    <th className="p-2 border-r border-amber-300 w-32">Yetkazib beruvchi</th>
+                    <th className="p-2 border-r border-amber-300 text-right w-24">Narx ($)</th>
                     <th className="p-2 border-r border-amber-300 text-center w-24">Sana</th>
-                    <th className="p-2 border-r border-amber-300 w-28">Manba</th>
-                    <th className="p-2 border-r border-amber-300 w-36">Izoh</th>
+                    <th className="p-2 border-r border-amber-300 w-24">Manba</th>
+                    <th className="p-2 border-r border-amber-300 w-32">Izoh</th>
                     <th className="p-2 text-center w-24">Amallar</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-amber-200">
-                  {parts.length === 0 ? (
+                  {filteredParts.length === 0 ? (
                     <tr>
-                      <td colSpan={10} className="p-6 text-center bg-yellow-50/50">
-                        <p className="font-black text-xs text-stone-800">Ehtiyot qismlar mavjud emas</p>
+                      <td colSpan={14} className="p-6 text-center bg-yellow-50/50">
+                        <p className="font-black text-xs text-stone-800">
+                          {isFilterActive
+                            ? 'Belgilangan filtrlar bo\'yicha avto moy topilmadi'
+                            : 'Avto moylar mavjud emas'}
+                        </p>
+                        {isFilterActive && (
+                          <button
+                            type="button"
+                            onClick={handleResetFilters}
+                            className="mt-2 px-2.5 py-1 bg-amber-300 hover:bg-amber-400 border border-amber-500 text-black text-[11px] font-black cursor-pointer"
+                          >
+                            Filtrlarni tozalash
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ) : (
-                    parts.map((item, idx) => (
+                    filteredParts.map((item, idx) => (
                       <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-yellow-50/40'}>
                         <td className="p-2 border-r border-amber-200 text-center font-mono font-black">{item.orderNumber || idx + 1}</td>
                         <td className="p-1.5 border-r border-amber-200 font-mono text-[10px] text-stone-700 leading-tight">
@@ -348,6 +964,10 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
                           })()}
                         </td>
                         <td className="p-2 border-r border-amber-200 font-black text-black break-words">{item.partName}</td>
+                        <td className="p-2 border-r border-amber-200 font-mono font-bold text-stone-900">{item.code || '-'}</td>
+                        <td className="p-2 border-r border-amber-200 text-stone-800">{item.api || '-'}</td>
+                        <td className="p-2 border-r border-amber-200 font-bold text-black">{item.liters || '-'}</td>
+                        <td className="p-2 border-r border-amber-200 text-stone-800">{item.country || '-'}</td>
                         <td className="p-2 border-r border-amber-200 font-black text-[10px] uppercase text-black">{item.brand}</td>
                         <td className="p-2 border-r border-amber-200 font-bold text-stone-800 break-words">{item.supplierName}</td>
                         <td className="p-2 border-r border-amber-200 text-right font-mono font-black text-black whitespace-nowrap">{formatUSD(item.price)}</td>
@@ -385,38 +1005,28 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. DESKTOP VERSIYA (O'zgarishsiz qoldirildi: "desktopsa esa shubday qolaversin") */}
+      {/* 2. DESKTOP VERSIYA */}
       {/* ========================================================================= */}
       <div className="hidden md:block border-2 border-amber-400 bg-white shadow-sm overflow-hidden rounded-none">
         <div className="w-full overflow-x-auto">
-          <table className="w-full table-fixed border-collapse text-left text-xs">
-            {/* Column Widths calibrated to prevent horizontal scrolling on standard screens */}
-            <colgroup>
-              <col style={{ width: '4%' }} />   {/* 1. № */}
-              <col style={{ width: '11%' }} />  {/* 2. Sistema vaqti */}
-              <col style={{ width: '15%' }} />  {/* 3. Avto ehtiyot qism nomi */}
-              <col style={{ width: '10%' }} />  {/* 4. Brend */}
-              <col style={{ width: '16%' }} />  {/* 5. Yetkazib beruvchi */}
-              <col style={{ width: '11%' }} />  {/* 6. Narx */}
-              <col style={{ width: '9%' }} />   {/* 7. Sana */}
-              <col style={{ width: '11%' }} />  {/* 8. Manba */}
-              <col style={{ width: '15%' }} />  {/* 9. Izoh */}
-              <col style={{ width: '8%' }} />   {/* Amallar */}
-            </colgroup>
-
+          <table className="w-full min-w-[1200px] border-collapse text-left text-xs">
             {/* Table Header */}
             <thead>
               <tr className="bg-yellow-200 border-b-2 border-amber-400 text-black text-[11px] font-black uppercase font-heading">
-                <th className="p-2 border-r border-amber-300 text-center">№</th>
-                <th className="p-2 border-r border-amber-300">Vaqt</th>
-                <th className="p-2 border-r border-amber-300">Avto ehtiyot qism</th>
-                <th className="p-2 border-r border-amber-300">Brend</th>
-                <th className="p-2 border-r border-amber-300">Yetkazib beruvchi</th>
-                <th className="p-2 border-r border-amber-300 text-right">Narx ($)</th>
-                <th className="p-2 border-r border-amber-300 text-center">Sana</th>
-                <th className="p-2 border-r border-amber-300">Manba</th>
-                <th className="p-2 border-r border-amber-300">Izoh</th>
-                <th className="p-2 text-center">Amallar</th>
+                <th className="p-2 border-r border-amber-300 text-center w-10">№</th>
+                <th className="p-2 border-r border-amber-300 w-24">Vaqt</th>
+                <th className="p-2 border-r border-amber-300 w-44">Avto moy nomi</th>
+                <th className="p-2 border-r border-amber-300 w-28">Kod</th>
+                <th className="p-2 border-r border-amber-300 w-24">API</th>
+                <th className="p-2 border-r border-amber-300 w-16 text-center">Litr</th>
+                <th className="p-2 border-r border-amber-300 w-28">Davlat</th>
+                <th className="p-2 border-r border-amber-300 w-24">Brend</th>
+                <th className="p-2 border-r border-amber-300 w-36">Yetkazib beruvchi</th>
+                <th className="p-2 border-r border-amber-300 text-right w-24">Narx ($)</th>
+                <th className="p-2 border-r border-amber-300 text-center w-24">Sana</th>
+                <th className="p-2 border-r border-amber-300 w-28">Manba</th>
+                <th className="p-2 border-r border-amber-300 w-32">Izoh</th>
+                <th className="p-2 text-center w-24">Amallar</th>
               </tr>
             </thead>
 
@@ -424,20 +1034,40 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
             <tbody className="divide-y divide-amber-200">
               {parts.length === 0 ? (
                 <tr>
-                  <td colSpan={10} className="p-8 text-center bg-yellow-50/50">
+                  <td colSpan={14} className="p-8 text-center bg-yellow-50/50">
                     <Wrench className="w-8 h-8 text-amber-500 mx-auto mb-2 opacity-60" />
                     <p className="font-black text-sm text-stone-800">
-                      Hozircha ehtiyot qismlar kiritilmagan
+                      Hozircha avto moylar kiritilmagan
                     </p>
                     <p className="text-xs text-stone-600 mt-1">
                       {isOnline
-                        ? 'Yangi ehtiyot qism qo\'shish uchun "+ Yangi ehtiyot qism" tugmasini bosing.'
+                        ? 'Yangi avto moy qo\'shish uchun "+ Yangi avto moy" tugmasini bosing.'
                         : 'Oflayn rejimdasiz. Internetga ulangach yangi ma\'lumot kiritishingiz mumkin.'}
                     </p>
                   </td>
                 </tr>
+              ) : filteredParts.length === 0 ? (
+                <tr>
+                  <td colSpan={14} className="p-8 text-center bg-yellow-50/50">
+                    <Filter className="w-8 h-8 text-amber-600 mx-auto mb-2 opacity-70" />
+                    <p className="font-black text-sm text-stone-800">
+                      Belgilangan filtrlar bo'yicha hech qanday avto moy topilmadi
+                    </p>
+                    <p className="text-xs text-stone-600 mt-1">
+                      Filtr parametrlarini o'zgartirib ko'ring yoki barcha filtrlarni tozalang.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-300 hover:bg-amber-400 border-2 border-amber-600 text-black text-xs font-black transition cursor-pointer active:scale-95"
+                    >
+                      <RotateCcw className="w-3.5 h-3.5 text-amber-900" />
+                      <span>Barcha filtrlarni tozalash</span>
+                    </button>
+                  </td>
+                </tr>
               ) : (
-                parts.map((item, idx) => (
+                filteredParts.map((item, idx) => (
                   <tr
                     key={item.id}
                     className={`transition-colors hover:bg-yellow-100/60 text-stone-900 ${
@@ -454,44 +1084,64 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
                       {item.systemTime}
                     </td>
 
-                    {/* 3. Avto ehtiyot qism nomi */}
+                    {/* 3. Avto moy nomi */}
                     <td className="p-2 border-r border-amber-200 font-black text-black break-words">
                       {item.partName}
                     </td>
 
-                    {/* 4. Brend */}
+                    {/* 4. Kod */}
+                    <td className="p-2 border-r border-amber-200 font-mono font-bold text-stone-900">
+                      {item.code || '-'}
+                    </td>
+
+                    {/* 5. API */}
+                    <td className="p-2 border-r border-amber-200 text-stone-800">
+                      {item.api || '-'}
+                    </td>
+
+                    {/* 6. Litr */}
+                    <td className="p-2 border-r border-amber-200 text-center font-bold text-black">
+                      {item.liters || '-'}
+                    </td>
+
+                    {/* 7. Davlat */}
+                    <td className="p-2 border-r border-amber-200 text-stone-800">
+                      {item.country || '-'}
+                    </td>
+
+                    {/* 8. Brend */}
                     <td className="p-2 border-r border-amber-200">
                       <span className="inline-block px-1.5 py-0.5 bg-amber-200 border border-amber-400 text-[10px] font-black text-black uppercase">
                         {item.brand}
                       </span>
                     </td>
 
-                    {/* 5. Yetkazib beruvchi */}
+                    {/* 9. Yetkazib beruvchi */}
                     <td className="p-2 border-r border-amber-200 font-bold text-stone-800 break-words">
                       {item.supplierName}
                     </td>
 
-                    {/* 6. Narx */}
+                    {/* 10. Narx */}
                     <td className="p-2 border-r border-amber-200 text-right font-mono font-black text-black whitespace-nowrap">
                       {formatUSD(item.price)}
                     </td>
 
-                    {/* 7. Sana */}
+                    {/* 11. Sana */}
                     <td className="p-2 border-r border-amber-200 text-center font-mono text-[11px] text-stone-700 whitespace-nowrap">
                       {item.date}
                     </td>
 
-                    {/* 8. Ma'lumot manbaasi */}
+                    {/* 12. Ma'lumot manbaasi */}
                     <td className="p-2 border-r border-amber-200 text-stone-700 font-semibold break-words">
                       {item.source}
                     </td>
 
-                    {/* 9. Izoh */}
+                    {/* 13. Izoh */}
                     <td className="p-2 border-r border-amber-200 text-stone-600 text-[11px] break-words">
                       {item.comment}
                     </td>
 
-                    {/* Amallar: Tahrirlash va O'chirish */}
+                    {/* 14. Amallar: Tahrirlash va O'chirish */}
                     <td className="p-2 text-center whitespace-nowrap">
                       <div className="flex items-center justify-center gap-1">
                         <button
@@ -539,7 +1189,7 @@ export const AutoPartsTable: React.FC<AutoPartsTableProps> = ({
               <h3 className="font-black text-sm uppercase">O'chirishni tasdiqlang</h3>
             </div>
             <p className="text-xs font-bold text-stone-700 mb-4">
-              Ushbu ehtiyot qism yozuvini bazadan o'chirishga ishonchingiz komilmi? Bu amalni qaytarib bo'lmaydi.
+              Ushbu avto moy yozuvini bazadan o'chirishga ishonchingiz komilmi? Bu amalni qaytarib bo'lmaydi.
             </p>
             <div className="flex items-center justify-end gap-2">
               <button

@@ -154,7 +154,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </span>
             </button>
 
-            {/* 2-Jadval: Avto ehtiyot qismlar */}
+            {/* 2-Jadval: Avto moylar */}
             <button
               type="button"
               onClick={() => onTabChange('autoparts')}
@@ -163,7 +163,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-amber-400 border-amber-600 text-black shadow-xs ring-1 ring-amber-500'
                   : 'bg-yellow-200/80 hover:bg-yellow-300 border-amber-400 text-stone-800'
               }`}
-              title="2-Jadval: Avto ehtiyot qismlar"
+              title="2-Jadval: Avto moylar"
             >
               <Wrench className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[2.5] shrink-0" />
               <span className="truncate">2-Jadval</span>

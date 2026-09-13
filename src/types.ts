@@ -83,17 +83,25 @@ export interface AutoPart {
   orderNumber: number; // 1-tartib son (avtomatik)
   systemTime: string; // 2-sistema vaqti (avtomatik)
   createdAt: number;
-  partName: string; // 3-avto ehtiyot qism nomi (majburiy)
-  brand: string; // 4-brend (majburiy)
-  supplierName: string; // 5-yetkazib beruvchi (majburiy)
-  price: number; // 6-narx (majburiy)
-  date: string; // 7-sana (majburiy)
-  source: string; // 8-ma'lumot manbaasi (majburiy)
-  comment: string; // 9-izoh (majburiy)
+  partName: string; // 3-avto moy nomi (majburiy)
+  code: string; // 4-kod (majburiy)
+  api?: string; // 5-api (majburiy emas)
+  liters: string; // 6-litr (majburiy)
+  country: string; // 7-ishlab chiqarilgan davlat (majburiy)
+  brand: string; // 8-brend (majburiy)
+  supplierName: string; // 9-yetkazib beruvchi (majburiy)
+  price: number; // 10-narx (majburiy)
+  date: string; // 11-sana (majburiy)
+  source: string; // 12-ma'lumot manbaasi (majburiy)
+  comment: string; // 13-izoh (majburiy)
 }
 
 export interface AutoPartFormData {
   partName: string;
+  code: string;
+  api: string;
+  liters: string;
+  country: string;
   brand: string;
   supplierName: string;
   price: string;

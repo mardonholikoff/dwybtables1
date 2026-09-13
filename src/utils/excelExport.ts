@@ -55,11 +55,15 @@ export function exportSuppliersToExcel(suppliers: Supplier[], fileNamePrefix = '
   XLSX.writeFile(workbook, fullFileName);
 }
 
-export function exportAutoPartsToExcel(parts: AutoPart[], fileNamePrefix = 'Avto_Ehtiyot_Qismlar') {
+export function exportAutoPartsToExcel(parts: AutoPart[], fileNamePrefix = 'Avto_Moylar') {
   const exportData = parts.map((item) => ({
     '№ (Tartib raqam)': item.orderNumber,
     'Sistema vaqti': item.systemTime,
-    'Avto ehtiyot qism nomi': item.partName,
+    'Avto moy nomi': item.partName,
+    'Kod': item.code || '',
+    'API': item.api || '',
+    'Litr': item.liters || '',
+    'Ishlab chiqarilgan davlat': item.country || '',
     'Brend': item.brand,
     'Yetkazib beruvchi': item.supplierName,
     'Narx ($ / USD)': item.price,
@@ -73,7 +77,11 @@ export function exportAutoPartsToExcel(parts: AutoPart[], fileNamePrefix = 'Avto
   worksheet['!cols'] = [
     { wch: 8 },  // №
     { wch: 22 }, // Sistema vaqti
-    { wch: 28 }, // Avto ehtiyot qism nomi
+    { wch: 28 }, // Avto moy nomi
+    { wch: 18 }, // Kod
+    { wch: 18 }, // API
+    { wch: 10 }, // Litr
+    { wch: 24 }, // Ishlab chiqarilgan davlat
     { wch: 18 }, // Brend
     { wch: 26 }, // Yetkazib beruvchi
     { wch: 18 }, // Narx
@@ -83,7 +91,7 @@ export function exportAutoPartsToExcel(parts: AutoPart[], fileNamePrefix = 'Avto
   ];
 
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, 'Avto ehtiyot qismlar');
+  XLSX.utils.book_append_sheet(workbook, worksheet, 'Avto moylar');
 
   const dateStr = new Date().toISOString().split('T')[0];
   const fullFileName = `${fileNamePrefix}_${dateStr}.xlsx`;

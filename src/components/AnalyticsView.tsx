@@ -62,11 +62,17 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
-  // 2-BOSQICH: Ehtiyot qism turi/nomi (Bazadagi mavjud turlar)
+  // 2-BOSQICH: Avto moy turi/nomi (Bazadagi mavjud turlar)
   const [selectedPartName, setSelectedPartName] = useState<string>('');
 
   // 3-BOSQICH: Brend tanlash (Tanlangan qismga mos brendlar)
   const [selectedBrand, setSelectedBrand] = useState<string>('ALL');
+
+  // 4-BOSQICH: Yangi qo'shimcha filtrlar: Kod, API, Litr, Davlat
+  const [selectedCode, setSelectedCode] = useState<string>('ALL');
+  const [selectedApi, setSelectedApi] = useState<string>('ALL');
+  const [selectedLiters, setSelectedLiters] = useState<string>('ALL');
+  const [selectedCountry, setSelectedCountry] = useState<string>('ALL');
 
   // Grafik sozlamalari: "natural" (egrisimon oval) default qilib qo'yildi
   const [curveType, setCurveType] = useState<'natural' | 'monotone' | 'linear'>('natural');
@@ -84,7 +90,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
     return map;
   }, [suppliers]);
 
-  // 1. Bazadagi barcha unikal ehtiyot qism nomlari (Har bir nom ro'yxatda faqat bir marta chiqadi)
+  // 1. Bazadagi barcha unikal avto moy nomlari
   const uniquePartNames = useMemo(() => {
     const map = new Map<string, number>();
     parts.forEach((p) => {
@@ -98,26 +104,95 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
       .sort((a, b) => b.count - a.count);
   }, [parts]);
 
-  // Agar ehtiyot qism hali tanlanmagan bo'lsa, birinchisini avtomatik tanlaymiz
+  // Agar avto moy hali tanlanmagan bo'lsa, birinchisini avtomatik tanlaymiz
   const activePartName = useMemo(() => {
+    if (selectedPartName === 'ALL') return 'ALL';
     if (selectedPartName && uniquePartNames.some((p) => p.name === selectedPartName)) {
       return selectedPartName;
     }
     return uniquePartNames.length > 0 ? uniquePartNames[0].name : '';
   }, [selectedPartName, uniquePartNames]);
 
-  // 2. Tanlangan ehtiyot qismga tegishli mavjud brendlar ro'yxati
+  // 2. Mavjud brendlar ro'yxati (tanlangan moyga mos)
   const availableBrands = useMemo(() => {
-    if (!activePartName) return [];
     const brandSet = new Set<string>();
     parts.forEach((p) => {
-      if (p.partName?.trim().toLowerCase() === activePartName.trim().toLowerCase()) {
-        if (p.brand && p.brand.trim()) {
-          brandSet.add(p.brand.trim());
-        }
+      if (activePartName !== 'ALL' && activePartName) {
+        if (p.partName?.trim().toLowerCase() !== activePartName.trim().toLowerCase()) return;
+      }
+      if (p.brand && p.brand.trim()) {
+        brandSet.add(p.brand.trim());
       }
     });
     return Array.from(brandSet).sort();
+  }, [parts, activePartName]);
+
+  // 3. Tanlangan moyga / umumiy holatga mos unikal Kodlar
+  const availableCodes = useMemo(() => {
+    const map = new Map<string, number>();
+    parts.forEach((p) => {
+      if (activePartName !== 'ALL' && activePartName) {
+        if (p.partName?.trim().toLowerCase() !== activePartName.trim().toLowerCase()) return;
+      }
+      const code = p.code?.trim();
+      if (code) {
+        map.set(code, (map.get(code) || 0) + 1);
+      }
+    });
+    return Array.from(map.entries())
+      .map(([code, count]) => ({ code, count }))
+      .sort((a, b) => a.code.localeCompare(b.code));
+  }, [parts, activePartName]);
+
+  // 4. Tanlangan moyga / umumiy holatga mos unikal APIlar
+  const availableApis = useMemo(() => {
+    const map = new Map<string, number>();
+    parts.forEach((p) => {
+      if (activePartName !== 'ALL' && activePartName) {
+        if (p.partName?.trim().toLowerCase() !== activePartName.trim().toLowerCase()) return;
+      }
+      const api = p.api?.trim();
+      if (api) {
+        map.set(api, (map.get(api) || 0) + 1);
+      }
+    });
+    return Array.from(map.entries())
+      .map(([api, count]) => ({ api, count }))
+      .sort((a, b) => a.api.localeCompare(b.api));
+  }, [parts, activePartName]);
+
+  // 5. Tanlangan moyga / umumiy holatga mos unikal Litrlar
+  const availableLiters = useMemo(() => {
+    const map = new Map<string, number>();
+    parts.forEach((p) => {
+      if (activePartName !== 'ALL' && activePartName) {
+        if (p.partName?.trim().toLowerCase() !== activePartName.trim().toLowerCase()) return;
+      }
+      const liters = p.liters?.trim();
+      if (liters) {
+        map.set(liters, (map.get(liters) || 0) + 1);
+      }
+    });
+    return Array.from(map.entries())
+      .map(([liters, count]) => ({ liters, count }))
+      .sort((a, b) => a.liters.localeCompare(b.liters));
+  }, [parts, activePartName]);
+
+  // 6. Tanlangan moyga / umumiy holatga mos unikal Davlatlar
+  const availableCountries = useMemo(() => {
+    const map = new Map<string, number>();
+    parts.forEach((p) => {
+      if (activePartName !== 'ALL' && activePartName) {
+        if (p.partName?.trim().toLowerCase() !== activePartName.trim().toLowerCase()) return;
+      }
+      const country = p.country?.trim();
+      if (country) {
+        map.set(country, (map.get(country) || 0) + 1);
+      }
+    });
+    return Array.from(map.entries())
+      .map(([country, count]) => ({ country, count }))
+      .sort((a, b) => a.country.localeCompare(b.country));
   }, [parts, activePartName]);
 
   // Sana bo'yicha tezkor filtrlar
@@ -146,31 +221,86 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
     setEndDate(endStr);
   };
 
-  // 3. Tanlangan muddat, ehtiyot qism va brend bo'yicha filtrlangan yozuvlar
+  // Qo'shimcha filtrlarni tozalash
+  const handleResetAdditionalFilters = () => {
+    setSelectedCode('ALL');
+    setSelectedApi('ALL');
+    setSelectedLiters('ALL');
+    setSelectedCountry('ALL');
+  };
+
+  const isAdditionalFilterActive =
+    selectedCode !== 'ALL' ||
+    selectedApi !== 'ALL' ||
+    selectedLiters !== 'ALL' ||
+    selectedCountry !== 'ALL';
+
+  // 7. Tanlangan parametrlar bo'yicha filtrlangan yozuvlar
   const filteredData = useMemo(() => {
-    if (!activePartName) return [];
+    if (!activePartName && selectedPartName !== 'ALL') return [];
 
     return parts.filter((item) => {
-      // Qism nomi mosligi
-      const partMatches =
-        item.partName?.trim().toLowerCase() === activePartName.trim().toLowerCase();
-      if (!partMatches) return false;
+      // 1. Qism nomi mosligi
+      if (activePartName !== 'ALL') {
+        if (item.partName?.trim().toLowerCase() !== activePartName.trim().toLowerCase()) {
+          return false;
+        }
+      }
 
-      // Brend mosligi
+      // 2. Kod mosligi
+      if (selectedCode !== 'ALL') {
+        if ((item.code || '').trim().toLowerCase() !== selectedCode.trim().toLowerCase()) {
+          return false;
+        }
+      }
+
+      // 3. API mosligi
+      if (selectedApi !== 'ALL') {
+        if ((item.api || '').trim().toLowerCase() !== selectedApi.trim().toLowerCase()) {
+          return false;
+        }
+      }
+
+      // 4. Litr mosligi
+      if (selectedLiters !== 'ALL') {
+        if ((item.liters || '').trim().toLowerCase() !== selectedLiters.trim().toLowerCase()) {
+          return false;
+        }
+      }
+
+      // 5. Davlat mosligi
+      if (selectedCountry !== 'ALL') {
+        if ((item.country || '').trim().toLowerCase() !== selectedCountry.trim().toLowerCase()) {
+          return false;
+        }
+      }
+
+      // 6. Brend mosligi
       if (selectedBrand !== 'ALL') {
         if (item.brand?.trim().toLowerCase() !== selectedBrand.trim().toLowerCase()) {
           return false;
         }
       }
 
-      // Sana oralig'i mosligi
+      // 7. Sana oralig'i mosligi
       const itemDate = item.date || '';
       if (startDate && itemDate < startDate) return false;
       if (endDate && itemDate > endDate) return false;
 
       return true;
     });
-  }, [parts, activePartName, selectedBrand, startDate, endDate]);
+  }, [
+    parts,
+    activePartName,
+    selectedPartName,
+    selectedCode,
+    selectedApi,
+    selectedLiters,
+    selectedCountry,
+    selectedBrand,
+    startDate,
+    endDate,
+  ]);
 
   // Xronologik tartibda saralash (eng avvalgi sanadan oxirgisiga qarab)
   const sortedRecords = useMemo(() => {
@@ -435,7 +565,11 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
       '№': idx + 1,
       'Sana': item.date,
       'Vaqt': item.systemTime,
-      'Avto ehtiyot qism': item.partName,
+      'Avto moy nomi': item.partName,
+      'Kod': item.code || '',
+      'API': item.api || '',
+      'Litr': item.liters || '',
+      'Ishlab chiqarilgan davlat': item.country || '',
       'Brend': item.brand,
       'Yetkazib beruvchi': item.supplierName,
       'Narxi ($ / USD)': item.price,
@@ -447,7 +581,8 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'Narxlar tahlili');
 
-    const fileName = `Daewoo_Tahlil_${activePartName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const prefix = activePartName === 'ALL' ? 'Barcha_Moylar' : activePartName.replace(/\s+/g, '_');
+    const fileName = `Daewoo_Tahlil_${prefix}_${new Date().toISOString().split('T')[0]}.xlsx`;
     XLSX.writeFile(workbook, fileName);
   };
 
@@ -509,7 +644,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
               <h1 className="text-sm sm:text-base md:text-lg font-black uppercase tracking-wider text-black font-heading truncate">
-                Ehtiyot Qismlar Narxlari Tahlili
+                Avto Moylar Tahlili
               </h1>
               <span className="px-1.5 py-0.5 bg-amber-300 border border-amber-500 text-[10px] sm:text-xs font-black shrink-0">
                 {uniquePartNames.length} xil mahsulot
@@ -613,22 +748,22 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
             </div>
           </div>
 
-          {/* 2-QADAM: EHTIYOT QISM TURI/NOMI */}
+          {/* 2-QADAM: AVTO MOY NOMI */}
           <div className="bg-yellow-50/70 border border-amber-300 p-2 sm:p-2.5 flex flex-col justify-between space-y-2">
             <div>
               <div className="flex items-center gap-1 text-black font-black text-[11px] sm:text-xs uppercase mb-1">
                 <Wrench className="w-3.5 h-3.5 text-amber-700 stroke-[2.5]" />
-                <span>2-Qadam: Ehtiyot qism turi</span>
+                <span>2-Qadam: Avto moy nomi</span>
               </div>
               <p className="text-[10px] text-stone-600 font-bold">
-                Mavjud unikal ehtiyot qismlardan tanlang:
+                Mavjud unikal avto moylardan tanlang:
               </p>
             </div>
 
             <div>
               {uniquePartNames.length === 0 ? (
                 <div className="p-2 bg-yellow-100 border border-amber-300 text-xs font-bold text-stone-700">
-                  Bazaga hali ehtiyot qism kiritilmagan
+                  Bazaga hali avto moy kiritilmagan
                 </div>
               ) : (
                 <select
@@ -636,9 +771,14 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                   onChange={(e) => {
                     setSelectedPartName(e.target.value);
                     setSelectedBrand('ALL');
+                    setSelectedCode('ALL');
+                    setSelectedApi('ALL');
+                    setSelectedLiters('ALL');
+                    setSelectedCountry('ALL');
                   }}
                   className="w-full px-2 py-1.5 text-xs border-2 border-amber-400 bg-white font-black text-black focus:outline-none rounded-none truncate"
                 >
+                  <option value="ALL">-- Barcha avto moylar ({uniquePartNames.length} xil) --</option>
                   {uniquePartNames.map((item) => (
                     <option key={item.name} value={item.name}>
                       {item.name} ({item.count} ta qayd)
@@ -651,7 +791,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
             <div className="text-[10px] sm:text-[11px] font-bold text-stone-700 flex items-center justify-between border-t border-amber-200 pt-1">
               <span>Tanlangan:</span>
               <span className="font-black text-black truncate max-w-[170px]">
-                {activePartName || 'Tanlanmagan'}
+                {activePartName === 'ALL' ? 'Barcha avto moylar' : activePartName || 'Tanlanmagan'}
               </span>
             </div>
           </div>
@@ -664,7 +804,7 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                 <span>3-Qadam: Brend tanlash</span>
               </div>
               <p className="text-[10px] text-stone-600 font-bold">
-                «{activePartName || 'Mahsulot'}» uchun brend:
+                «{activePartName === 'ALL' ? 'Barcha moylar' : activePartName || 'Mahsulot'}» uchun brend:
               </p>
             </div>
 
@@ -713,6 +853,112 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
             </div>
           </div>
         </div>
+
+        {/* 4-QADAM: KOD, API, LITR VA DAVLAT BO'YICHA FILTRLASH */}
+        <div className="border-t-2 border-amber-200 pt-3">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+            <div className="flex items-center gap-1.5 text-xs font-black uppercase text-black">
+              <Layers className="w-3.5 h-3.5 text-amber-700 stroke-[2.5]" />
+              <span>Qo'shimcha filtrlar (Kod, API, Litr, Davlat):</span>
+              {isAdditionalFilterActive && (
+                <span className="px-1.5 py-0.5 bg-amber-400 border border-amber-600 text-[10px] font-black uppercase">
+                  Filtr faol
+                </span>
+              )}
+            </div>
+            {isAdditionalFilterActive && (
+              <button
+                type="button"
+                onClick={handleResetAdditionalFilters}
+                className="text-[11px] font-black text-red-700 hover:text-red-900 underline cursor-pointer self-start sm:self-auto"
+              >
+                Qo'shimcha filtrlarni tozalash
+              </button>
+            )}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            {/* KOD BO'YICHA */}
+            <div className="bg-yellow-50/70 border border-amber-300 p-2 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-black text-stone-700">Kod:</span>
+                <span className="text-[9px] font-mono font-bold text-stone-500">{availableCodes.length} xil</span>
+              </div>
+              <select
+                value={selectedCode}
+                onChange={(e) => setSelectedCode(e.target.value)}
+                className="w-full px-2 py-1 text-xs border border-amber-400 bg-white font-bold text-black focus:outline-none rounded-none truncate"
+              >
+                <option value="ALL">-- Barcha kodlar --</option>
+                {availableCodes.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.code} ({c.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* API BO'YICHA */}
+            <div className="bg-yellow-50/70 border border-amber-300 p-2 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-black text-stone-700">API:</span>
+                <span className="text-[9px] font-mono font-bold text-stone-500">{availableApis.length} xil</span>
+              </div>
+              <select
+                value={selectedApi}
+                onChange={(e) => setSelectedApi(e.target.value)}
+                className="w-full px-2 py-1 text-xs border border-amber-400 bg-white font-bold text-black focus:outline-none rounded-none truncate"
+              >
+                <option value="ALL">-- Barcha APIlar --</option>
+                {availableApis.map((a) => (
+                  <option key={a.api} value={a.api}>
+                    {a.api} ({a.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* LITR BO'YICHA */}
+            <div className="bg-yellow-50/70 border border-amber-300 p-2 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-black text-stone-700">Litr:</span>
+                <span className="text-[9px] font-mono font-bold text-stone-500">{availableLiters.length} xil</span>
+              </div>
+              <select
+                value={selectedLiters}
+                onChange={(e) => setSelectedLiters(e.target.value)}
+                className="w-full px-2 py-1 text-xs border border-amber-400 bg-white font-bold text-black focus:outline-none rounded-none truncate"
+              >
+                <option value="ALL">-- Barcha litrlar --</option>
+                {availableLiters.map((l) => (
+                  <option key={l.liters} value={l.liters}>
+                    {l.liters} ({l.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* DAVLAT BO'YICHA */}
+            <div className="bg-yellow-50/70 border border-amber-300 p-2 space-y-1">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] uppercase font-black text-stone-700">Davlat:</span>
+                <span className="text-[9px] font-mono font-bold text-stone-500">{availableCountries.length} xil</span>
+              </div>
+              <select
+                value={selectedCountry}
+                onChange={(e) => setSelectedCountry(e.target.value)}
+                className="w-full px-2 py-1 text-xs border border-amber-400 bg-white font-bold text-black focus:outline-none rounded-none truncate"
+              >
+                <option value="ALL">-- Barcha davlatlar --</option>
+                {availableCountries.map((d) => (
+                  <option key={d.country} value={d.country}>
+                    {d.country} ({d.count})
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ========================================================================= */}
@@ -743,8 +989,12 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                   )}
                 </div>
                 <p className="text-[11px] font-bold text-stone-700">
-                  Mahsulot: <span className="text-black font-black font-heading">{activePartName}</span>{' '}
+                  Mahsulot: <span className="text-black font-black font-heading">{activePartName === 'ALL' ? 'Barcha avto moylar' : activePartName}</span>{' '}
                   {selectedBrand !== 'ALL' && <span className="text-amber-800">({selectedBrand})</span>}
+                  {selectedCode !== 'ALL' && <span className="text-sky-800 ml-1.5">[Kod: {selectedCode}]</span>}
+                  {selectedApi !== 'ALL' && <span className="text-purple-800 ml-1.5">[API: {selectedApi}]</span>}
+                  {selectedLiters !== 'ALL' && <span className="text-amber-800 ml-1.5">[{selectedLiters}L]</span>}
+                  {selectedCountry !== 'ALL' && <span className="text-stone-800 ml-1.5">[{selectedCountry}]</span>}
                 </p>
               </div>
             </div>
@@ -800,16 +1050,41 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                       </span>
                     </div>
 
-                    {/* Faoliyat turi va aloqa */}
-                    <div className="flex items-center gap-2 flex-wrap text-[10px]">
+                    {/* Faoliyat turi va qo'shimcha parametrlar */}
+                    <div className="flex items-center gap-1.5 flex-wrap text-[10px]">
                       {supplierProfile?.activityType && (
                         <span className="px-1.5 py-0.5 bg-yellow-200 border border-amber-400 font-bold uppercase text-black">
                           Faoliyat: {supplierProfile.activityType}
                         </span>
                       )}
+                      {activePartName === 'ALL' && quoteItem.partName && (
+                        <span className="px-1.5 py-0.5 bg-yellow-100 border border-amber-400 font-black text-black">
+                          {quoteItem.partName}
+                        </span>
+                      )}
                       {quoteItem.brand && (
                         <span className="px-1.5 py-0.5 bg-amber-100 border border-amber-400 font-black uppercase text-amber-900">
-                          Brend: {quoteItem.brand}
+                          {quoteItem.brand}
+                        </span>
+                      )}
+                      {quoteItem.code && (
+                        <span className="px-1.5 py-0.5 bg-sky-100 border border-sky-400 font-mono font-bold text-sky-950">
+                          Kod: {quoteItem.code}
+                        </span>
+                      )}
+                      {quoteItem.api && (
+                        <span className="px-1.5 py-0.5 bg-purple-100 border border-purple-400 font-mono font-bold text-purple-950">
+                          API: {quoteItem.api}
+                        </span>
+                      )}
+                      {quoteItem.liters && (
+                        <span className="px-1.5 py-0.5 bg-amber-100 border border-amber-400 font-mono font-bold text-amber-950">
+                          {quoteItem.liters}L
+                        </span>
+                      )}
+                      {quoteItem.country && (
+                        <span className="px-1.5 py-0.5 bg-stone-100 border border-stone-400 font-bold text-stone-900">
+                          {quoteItem.country}
                         </span>
                       )}
                     </div>
@@ -1326,11 +1601,18 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                   <tr>
                     <th className="p-1.5 border-r border-amber-300 text-center w-8">№</th>
                     <th className="p-1.5 border-r border-amber-300 w-24 text-center">Sana</th>
-                    <th className="p-1.5 border-r border-amber-300 w-24">Vaqt</th>
+                    <th className="p-1.5 border-r border-amber-300 w-20">Vaqt</th>
+                    {activePartName === 'ALL' && (
+                      <th className="p-1.5 border-r border-amber-300 w-28">Avto moy</th>
+                    )}
+                    <th className="p-1.5 border-r border-amber-300 w-20">Kod</th>
+                    <th className="p-1.5 border-r border-amber-300 w-16">API</th>
+                    <th className="p-1.5 border-r border-amber-300 w-14 text-center">Litr</th>
+                    <th className="p-1.5 border-r border-amber-300 w-20">Davlat</th>
                     <th className="p-1.5 border-r border-amber-300 w-20">Brend</th>
                     <th className="p-1.5 border-r border-amber-300">Yetkazib beruvchi</th>
                     <th className="p-1.5 border-r border-amber-300 text-right w-24">Narx ($)</th>
-                    <th className="p-1.5 border-r border-amber-300 w-28">Manba</th>
+                    <th className="p-1.5 border-r border-amber-300 w-24">Manba</th>
                     <th className="p-1.5">Izoh</th>
                   </tr>
                 </thead>
@@ -1343,6 +1625,15 @@ export const AnalyticsView: React.FC<AnalyticsViewProps> = ({ parts, suppliers =
                       <td className="p-1.5 border-r border-amber-200 text-center font-mono font-black">{idx + 1}</td>
                       <td className="p-1.5 border-r border-amber-200 text-center font-mono font-bold text-black whitespace-nowrap">{item.date}</td>
                       <td className="p-1.5 border-r border-amber-200 font-mono text-[9px] sm:text-[10px] text-stone-600 whitespace-nowrap">{item.systemTime}</td>
+                      {activePartName === 'ALL' && (
+                        <td className="p-1.5 border-r border-amber-200 font-bold text-black truncate max-w-[120px]" title={item.partName}>
+                          {item.partName}
+                        </td>
+                      )}
+                      <td className="p-1.5 border-r border-amber-200 font-mono font-bold text-stone-900">{item.code || '—'}</td>
+                      <td className="p-1.5 border-r border-amber-200 font-mono font-bold text-stone-800">{item.api || '—'}</td>
+                      <td className="p-1.5 border-r border-amber-200 text-center font-mono font-bold text-stone-900">{item.liters || '—'}</td>
+                      <td className="p-1.5 border-r border-amber-200 font-bold text-stone-800 truncate max-w-[100px]">{item.country || '—'}</td>
                       <td className="p-1.5 border-r border-amber-200 font-bold text-[10px] uppercase text-black">{item.brand}</td>
                       <td className="p-1.5 border-r border-amber-200 font-bold text-stone-900">{item.supplierName}</td>
                       <td className="p-1.5 border-r border-amber-200 text-right font-mono font-black text-black whitespace-nowrap">
